@@ -18,11 +18,11 @@ Numbered sections use `#`:
 `## Subsection`
 `### Subsubsection`
 
-Unnumbered sections use `*`:
+For unnumbered sections, append an `*` at the end (similar to LaTeX):
 
-`* Section`
-`** Subsection`
-`*** Subsubsection`
+`#* Section`
+`##* Subsection`
+`###* Subsubsection`
 
 `#` and `*` must appear at the very beginning of the line, and must be followed by a space before the section name.
 
