@@ -50,9 +50,25 @@ So something like:
 
 */
 
-export enum NodeType {
-    // Word
+// Define atomics?
+
+// These nodes never have any children. Their data
+// contains raw strings which will be written to
+// the LaTeX files as-is.
+export enum LeafType {
     WORD,
+    RAW_TEX,
+    AT_DELIM,
+    TEX_INLINE,
+    TEX_DISPLAY,
+    LATEX_INLINE,
+    LATEX_DISPLAY,
+    MACRO_DEFINITION
+}
+
+// These nodes always have children. They may or may
+// not contain extra data about the node.
+export enum BranchType {
     // Paragraph
     PARAGRAPH,
     // SECTIONS
@@ -62,29 +78,22 @@ export enum NodeType {
     BOLD, ITALIC, UNDERLINE, STRIKETHROUGH,
     // Links/Images
     LINK_REF, IMAGE,
-    // Macros
-    MACRO_DEF,
     // Lists
     ITEMIZE, ENUMERATE,
-    // @delim
-    AT_DELIM,
-    // $...$ and $$...$$
-    TEX_INLINE, TEX_DISPLAY,
-    // \(...\) and \[...\]
-    LATEX_INLINE, LATEX_DISPLAY,
-    // Raw TeX from heredoc blocks
-    RAW_TEX
 }
 
-// Define atomics?
+// Each node is either a leaf node or a branch node.
+export type NodeType = LeafType | BranchType;
 
-type Tree = {
+// The tree structure.
+export type Node = {
     col: number,
     row: number,
     type: NodeType,
-    data?: string,
-    children?: Tree[]
-}
+    data: string | null,
+    position: number
+    children?: Node[],
+};
 
 // The AST is a list of nodes.
-export type AST = Tree[]
+export type AST = Node[]
