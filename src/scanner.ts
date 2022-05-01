@@ -97,7 +97,7 @@ function advance(oldState: State, n: number = 1): State {
 // function's value.
 function advanceWhile(oldState: State, fn: (s: State) => boolean): State {
     if (fn(oldState) && hasSourceLeft(oldState)) {
-        return advanceWhile(advanceOnce(oldState), fn;
+        return advanceWhile(advanceOnce(oldState), fn);
     } else {
         return oldState;
     }
@@ -139,7 +139,7 @@ function lookahead(state: State, n: number = 1): string {
     // again we add one.
     const start = position + 1;
     const end   = Math.min(lookaheadPosition, bound) + 1;
-    return state.source.slice(start, end);
+    return source.slice(start, end);
 }
 
 // Same as lookahead, but in the other direction.
