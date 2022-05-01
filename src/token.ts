@@ -37,7 +37,7 @@ export enum TokenType {
     WORD,
 }
 
-export interface Token {
+export type Token = {
     type: TokenType,
     lexeme: string,
     // Position of the token in the source string.

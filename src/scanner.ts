@@ -18,7 +18,7 @@
 import { Token, TokenType, tokenToStr } from "./token.ts"
 
 // Keep track of scanner state.
-interface State {
+type State = {
     source: string,
     tokens: Token[],
     position: number,
