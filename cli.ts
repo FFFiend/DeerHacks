@@ -4,7 +4,7 @@ const args = Deno.args
 
 if (args.length ==0){
     // cool, not too hard to follow 
-    console.log("Type ./run followed by the two individual file paths of the files you have your text written in, and the file you want your Latex to be written to);
+    console.log("Type ./run followed by the two individual file paths of the files you have your text written in, and the file you want your Latex to be written to");
 }
                 
 else if (args.length == 1){
