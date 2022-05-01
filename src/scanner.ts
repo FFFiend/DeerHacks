@@ -458,11 +458,12 @@ function runScanner(st: State): State {
                 }
 
                 // WORD
-                if (/\S/.test(c)) {
+                // fix bug with special characters that we dont use in the markup being ignored
+                if (/[a-zA-Z]/.test(c)) {
                     let i = 1;
                     const shouldContinue = (i: number) => {
                         if (st.source.length >= st.position + i) {
-                            return /\S/.test(st.source[st.position + i]);
+                            return /[a-zA-Z]/.test(st.source[st.position + i]);
                         } else {
                             return false;
                         }
