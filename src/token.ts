@@ -32,9 +32,9 @@ export enum TokenType {
     // Keyword 'macro'
     KW_MACRO,
     // 'TEX <<< ...' and '...'
-    HEREDOC_OPEN, HEREDOC_CLOSE,
-    // Plain text
-    PLAIN_TEXT,
+    HEREDOC_BLOCK,
+    // Plain text word (delimited by whitespace).
+    WORD,
 }
 
 export interface Token {
