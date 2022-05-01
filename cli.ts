@@ -17,7 +17,10 @@ else if (args.length == 1){
 }
 else if (args.length == 2){
     const getter = await Deno.readTextFile(args[0]);
-    // still wiating on this cuz of the tokenization and parsing stuff
+    // getter is the input file, has been read and rdy for use. 
+    
+    
+    // still wiating on this cuz of the tokenization and parsing stuff, but below is the code for the file writing. May replace arg[0] with getter instead
     // await Deno.writeTextFile(arg[1], arg[0]);
     
 
