@@ -79,13 +79,15 @@ Note that the `graphicx` package is required for this.
 
 The syntax for defining macros is:
 ```
-macro <name> [param1 param2 ... paramN] {<body>}
+macro name{param1}{param2}{...}{paramN} = {body}
 ```
 
 For example:
 ```
 macro fn{A}{B} = {f : A \to B}
 ```
+
+Parameters do not need to be single letters.
 
 Besides `macro`, you may also wish to use `mathmacro` for defining macros in the same manner. The difference is that with `mathmacros`, the program will ensure that they are always placed inside a math environment. For example:
 ```
@@ -95,7 +97,7 @@ mathmacro map{A}{B} = {f : A \to B}
 
 Using `\fun{A}{B}` outside a math environment will throw an error since the command `\to` can only be used inside math environments. However, if you use `\map{A}{B}` outside a math environment, the program will automatically insert math delimiters around it to ensure that it renders properly and no errors are thrown.
 
-### `@` shorthand
+### `@` delimiter shorthand
 
 If you need to insert a single "token" into a math environment, you would need to put delimiters around it everytime. For example:
 ```
