@@ -83,7 +83,7 @@ function advance(oldState: State, n: number = 1): State {
 // Advances state as long as predicate returns true on the
 // state at each step and there are still tokens left.
 function advanceWhile(oldState: State, fn: (s: State) => boolean): State {
-    if (fn(oldState) && hasTokensLeft(oldState)) {
+    if (hasTokensLeft(oldState) && fn(oldState)) {
         return advanceWhile(advanceOnce(oldState), fn);
     } else {
         return oldState;

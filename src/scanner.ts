@@ -96,7 +96,7 @@ function advance(oldState: State, n: number = 1): State {
 // return the final state regardless of the predicate
 // function's value.
 function advanceWhile(oldState: State, fn: (s: State) => boolean): State {
-    if (fn(oldState) && hasSourceLeft(oldState)) {
+    if (hasSourceLeft(oldState) && fn(oldState)) {
         return advanceWhile(advanceOnce(oldState), fn);
     } else {
         return oldState;
