@@ -301,14 +301,6 @@ function runScanner(st: State): State {
                 return runScanner(advance(addToken(st, token)));
             }
 
-            // EMPTY_ROW
-            case "\n":
-                if (lookahead(st) == "\n") {
-                    const type = TokenType.EMPTY_ROW;
-                    const lexeme = "\n\n";
-                    const token = createToken(st, type, lexeme);
-                    return runScanner(advance(addToken(st, token), 2));
-                }
 
 /*
             // MACRO
@@ -384,6 +376,15 @@ function runScanner(st: State): State {
                         // of the lexeme.
                         return runScanner(advance(addToken(st, token), i));
                     }
+                }
+
+            // EMPTY_ROW
+            case "\n":
+                if (lookahead(st) == "\n") {
+                    const type = TokenType.EMPTY_ROW;
+                    const lexeme = "\n\n";
+                    const token = createToken(st, type, lexeme);
+                    return runScanner(advance(addToken(st, token), 2));
                 }
 
             // DEFAULT CASE
