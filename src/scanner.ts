@@ -64,33 +64,70 @@ function addToken(oldState: State, token: Token): State {
     };
 }
 
-// Increment's given state's position, and
-// sets/resets col/row if the char we were at
-// was a newline. The optional n argument (default 1)
-// can be used to advance state 'n' times.
+// Advances state by one character, and sets/resets
+// col/row if the current character was a newline.
+// If there is no source left to scan, returns the
+// oldState as is.
+function advanceOnce(oldState: State): State {
+    if (hasSourceLeft(oldState)) {
+        const isEndOfLine = curChar(oldState) == "\n"
+
+        return {
+            source: oldState.source,
+            tokens: [...oldState.tokens],
+            position: oldState.position + 1,
+            col: isEndOfLine ? 1 : oldState.col + 1,
+            row: isEndOfLine ? oldState.row + 1 : oldState.row
+        }
+    } else {
+        return oldState;
+    }
+}
+
+// Advances the state `n` times, defaults to once.
 function advance(oldState: State, n: number = 1): State {
     if (n == 1) return advanceOnce(oldState);
     else return advance(advanceOnce(oldState), n - 1);
 }
 
-// Advances state by one character.
-function advanceOnce(oldState: State): State {
-    const isEndOfLine = oldState.source[oldState.position] == "\n"
-
-    return {
-        source: oldState.source,
-        tokens: [...oldState.tokens],
-        position: oldState.position + 1,
-        col: isEndOfLine ? 1 : oldState.col + 1,
-        row: isEndOfLine ? oldState.row + 1 : oldState.row
+// Keeps advancing the state as long as the predicate
+// function `fn` returns true given the state at each
+// step. If the source runs out, it will immediately
+// return the final state regardless of the predicate
+// function's value.
+function advanceWhile(oldState: State, fn: (s: State) => boolean): State {
+    if (fn(oldState) && hasSourceLeft(oldState)) {
+        return advanceWhile(advanceOnce(oldState), fn;
+    } else {
+        return oldState;
     }
+}
+
+// Given two states, it returns the substring between
+// the first state's position and the second's. If the
+// sources for the two states are not the same, it will
+// return an empty string.
+function substringBetweenStates(stateA: State, stateB: State): string {
+    if (stateA.source != stateB.source) return "";
+
+    const source = stateA.source;
+    const posA = stateA.position;
+    const posB = stateB.position;
+
+    const start = Math.min(posA, posB);
+    const end   = Math.max(posA, posB);
+
+    // TODO: test if this returns the proper string or
+    // TODO: if we need to add one to anything to make
+    // TODO: it work as intended.
+    return source.slice(start, end);
 }
 
 // Returns the next n characters in source. n is optional,
 // and defaults to 1. If there are no more characters left,
 // returns an empty string. If there are fewer than n
 // characters left, it returns whichever characters are left.
-export function lookahead(state: State, n: number = 1): string {
+function lookahead(state: State, n: number = 1): string {
     const { source, position } = state;
 
     const lookaheadPosition = position + n;
@@ -122,6 +159,12 @@ function curChar(state: State): string {
     return state.source[state.position];
 }
 
+// Given an offset from the current state position `i`,
+// returns the character at that offset.
+function charAtOffset(state: State, i: number): string {
+    return state.source[state.position + i];
+}
+
 // Returns true if there are still characters left to
 // be scanned.
 function hasSourceLeft(state: State): boolean {
@@ -146,7 +189,7 @@ function runScanner(st: State): State {
                     // false.
                     const shouldContinue = (i: number) => {
                         if (st.source.length <= st.position + i) {
-                            return st.source[st.position + i] != "\n";
+                            return charAtOffset(st, i) != "\n";
                         } else {
                             return false;
                         }
@@ -356,7 +399,7 @@ function runScanner(st: State): State {
                         // We keep looping as long as the i'th char from
                         // current position is NOT whitespace.
                         if (st.position + i <= st.source.length) {
-                            return !/\s/.test(st.source[st.position + i]);
+                            return !/\s/.test(charAtOffset(st, i));
                         } else {
                             // If i goes out of bounds, we stop looping.
                             return false;
