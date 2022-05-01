@@ -62,7 +62,7 @@ function constrainLexeme(lexeme: string): string {
 
 export function tokenToStr(token: Token): string {
     return `Token {
-    Type: ${token.type},
+    Type: ${TokenType[token.type]},
     Position: ${token.position},
     Column: ${token.col},
     Row: ${token.row},
