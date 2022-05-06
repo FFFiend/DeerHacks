@@ -97,3 +97,19 @@ export type Node = {
 
 // The AST is a list of nodes.
 export type AST = Node[]
+
+// So we can index the enum to determine Branch/Leaf type...
+type EnumObj = {[index: string | number]: string | number};
+
+export function nodeToStr(node: Node): string {
+    // The node is a branch node if it has the `children` field.
+    const type: EnumObj = Object.keys(node).includes("children") ? BranchType : LeafType;
+    // Assert node.type as a number so we can index `type`
+    // without typescript yelling at us.
+    return `${type[node.type as number]} {
+        Col: ${node.col},
+        Row: ${node.row},
+        Data: ${node.data},
+        Children: ${node.children ? node.children.map(n => nodeToStr(n)) : null}
+    }`;
+}
