@@ -10,6 +10,12 @@ import { AST, NodeType, LeafType, BranchType, Node } from "./ast.ts"
 // TODO: I guess it doesn't matter if I mutate the original
 // TODO: state object, then...
 
+// TODO: Need to decide what starts/ends a paragraph. There's
+// TODO: no markers for paras besides the EMPTY_ROW token,
+// TODO: so i need to handle that carefully. Maybe, headings
+// TODO: and EMPTY_ROW end a para, and everything else starts
+// TODO: a new para or continues the previous.
+
 // Keep track of parser state.
 type State = {
     tokens: Token[],
@@ -90,7 +96,8 @@ function advanceWhile(oldState: State, fn: (s: State) => boolean): State {
     }
 }
 
-// Returns the sub-list between two states' positions.
+// Returns the sub-list between two states' positions,
+// including the tokens at each state's current positions.
 function subListBetweenStates(stateA: State, stateB: State): Token[] {
     const tokenList = stateA.tokens;
     const posA = stateA.position;
@@ -99,7 +106,7 @@ function subListBetweenStates(stateA: State, stateB: State): Token[] {
     const start = Math.min(posA, posB);
     const end   = Math.max(posA, posB);
 
-    return tokenList.slice(start, end);
+    return tokenList.slice(start, end + 1);
 }
 
 // Returns the next n tokens in the list.
@@ -141,11 +148,15 @@ function runParser(st: State): State {
 
                 // Advance till next bold
                 const newSt = advanceWhile(st, predicate);
-                console.log(newSt);
                 // Take the sub-list between them and recursively
                 // parse that sub-list with a new state.
                 const subList = subListBetweenStates(st, newSt);
-                const subState = newState(subList);
+                // We slice it to exclude the DOUBLE_STAR tokens
+                // at the start and end, otherwise it will keep
+                // recursing infinitely.
+                const subState = newState(subList.slice(1,-1));
+                // We parse the stuff inside the DOUBLE_STAR and
+                // take the resulting AST.
                 const subTree = runParser(subState).tree;
 
                 // Create node
@@ -154,7 +165,10 @@ function runParser(st: State): State {
                 const children = subTree;
                 const node = createBranch(st, type, data, children);
 
-                return runParser(addNode(st, node));
+                // Add the node, and then advance (since the state
+                // is currently sitting at the closing DOUBLE_STAR)
+                // and continue parsing.
+                return runParser(advance(addNode(st, node)));
             }
 
             // WORD

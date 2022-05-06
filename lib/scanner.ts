@@ -104,9 +104,10 @@ function advanceWhile(oldState: State, fn: (s: State) => boolean): State {
 }
 
 // Given two states, it returns the substring between
-// the first state's position and the second's. If the
-// sources for the two states are not the same, it will
-// return an empty string.
+// the first state's position and the second's, including
+// both characters at each state's current position. If
+// the sources for the two states are not the same, it
+// will return an empty string.
 function substringBetweenStates(stateA: State, stateB: State): string {
     if (stateA.source != stateB.source) return "";
 
@@ -117,10 +118,7 @@ function substringBetweenStates(stateA: State, stateB: State): string {
     const start = Math.min(posA, posB);
     const end   = Math.max(posA, posB);
 
-    // TODO: test if this returns the proper string or
-    // TODO: if we need to add one to anything to make
-    // TODO: it work as intended.
-    return source.slice(start, end);
+    return source.slice(start, end + 1);
 }
 
 // Returns the next n characters in source. n is optional,
