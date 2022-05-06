@@ -37,6 +37,9 @@ export enum TokenType {
     WORD,
 }
 
+// TODO: Turn this into a class and then use tokenToStr
+// TODO: for it's toString, so that tokens show up
+// TODO: properly when printing.
 export type Token = {
     type: TokenType,
     lexeme: string,
@@ -61,11 +64,5 @@ function constrainLexeme(lexeme: string): string {
 }
 
 export function tokenToStr(token: Token): string {
-    return `Token {
-    Type: ${TokenType[token.type]},
-    Position: ${token.position},
-    Column: ${token.col},
-    Row: ${token.row},
-    Lexeme: ${constrainLexeme(token.lexeme)}
-    };`
+    return `Token { Type: ${TokenType[token.type]}, Col: ${token.col}, Row: ${token.row}, Lexeme: ${constrainLexeme(token.lexeme)} };`
 }
