@@ -1,3 +1,4 @@
+// Token types
 export enum TokenType {
     // '*', '**'
     STAR, DOUBLE_STAR,
@@ -23,7 +24,9 @@ export enum TokenType {
     // An empty line
     EMPTY_ROW,
     // LaTeX macro, i.e '\XYZ'
-    MACRO,
+    MACRO_CALL,
+    // Markup macro definition.
+    MACRO_DEF,
     // '@' delimiter
     AT_DELIM,
     // A number followed by a dot (which will be used
@@ -37,9 +40,7 @@ export enum TokenType {
     WORD,
 }
 
-// TODO: Turn this into a class and then use tokenToStr
-// TODO: for it's toString, so that tokens show up
-// TODO: properly when printing.
+// Token object
 export type Token = {
     type: TokenType,
     lexeme: string,
@@ -50,19 +51,11 @@ export type Token = {
     row: number
 }
 
-// Shortens longer lexemes to a length of 25 characters.
-function constrainLexeme(lexeme: string): string {
-    const shortEnough = Math.max(lexeme.length, 25) == 25;
-
-    if (shortEnough) {
-        return lexeme;
-    } else {
-        const start = lexeme.slice(0, 11);
-        const end   = lexeme.slice(lexeme.length, -11);
-        return start + "..." + end;
-    }
-}
-
-export function tokenToStr(token: Token): string {
-    return `Token { Type: ${TokenType[token.type]}, Col: ${token.col}, Row: ${token.row}, Lexeme: ${constrainLexeme(token.lexeme)} };`
+// Keep track of scanner state.
+export type State = {
+    source: string,
+    tokens: Token[],
+    position: number,
+    col: number,
+    row: number
 }

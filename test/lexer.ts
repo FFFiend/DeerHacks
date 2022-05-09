@@ -1,5 +1,5 @@
-import { scan } from "../lib/scanner.ts";
-import { tokenToStr } from "../lib/token.ts";
+import { scan } from "../lib/lexer/lexer.ts";
+import { tokenToStr } from "../lib/lexer/helpers.ts";
 
 const sample = "word1 : word2";
 
