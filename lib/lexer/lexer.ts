@@ -246,7 +246,7 @@ function runScanner(st: State): State {
             // Comments
             case "%": {
                 const newSt = advanceWhile(st, (curSt) => {
-                    return curChar(curSt) == "\n";
+                    return curChar(curSt) != "\n";
                 });
 
                 // One more advance to move past the \n.
@@ -403,14 +403,14 @@ function handleOther(st: State, c: string): State {
         return advance(addToken(newSt, token));
     }
 
-    // At this point c is whitespace or an unrecognized.
-    // char. For now we log it just in case it's an
-    // important character or something. We can remove
-    // the log after enough testing.
-    console.log("Unrecognized character: '" + c + "'");
-    // Skip the whitespace/unrecognized char. Eventually,
-    // if it's not whitespace then we will show an error
-    // here.
+    // Ignore extra whitespace.
+    if (/\s/.test(c)) {
+        return advance(st);
+    }
+
+    // At this point, c is an unrecognized character.
+    // TODO: Throw error on unrecognized chars instead of
+    // TODO: just ignoring them as we do right now.
     return advance(st);
 }
 
