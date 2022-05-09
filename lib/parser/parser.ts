@@ -1,6 +1,6 @@
 // Parse tokens into ...???
 
-import { Token, TokenType } from "./token.ts"
+import { Token, TokenType } from "../lexer/types.ts"
 import { AST, NodeType, LeafType, BranchType, Node } from "./ast.ts"
 
 // TODO: Javascript actually just creates shallow copies
