@@ -168,7 +168,7 @@ function runParser(st: State): State {
                 // Add the node, and then advance (since the state
                 // is currently sitting at the closing DOUBLE_STAR)
                 // and continue parsing.
-                return runParser(advance(addNode(st, node)));
+                return runParser(advance(addNode(newSt, node)));
             }
 
             // WORD
