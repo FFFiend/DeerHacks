@@ -6,8 +6,12 @@ import { Node, nodeToStr } from "../lib/parser/ast.ts";
 // NOTE: still has some bugs that need to be fixed.
 const sample = "** bold **"
 
-const ast: Node[] = parse(scan(testStr));
+const ast: Node[] = parse(scan(sample));
 
+console.log(ast);
+
+/*
 for (const node of ast) {
     console.log(nodeToStr(node));
 }
+*/
