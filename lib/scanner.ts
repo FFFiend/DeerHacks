@@ -272,6 +272,7 @@ function runScanner(st: State): State {
             }
 
             // LEFT_BRACE
+            // TODO: Why do we parse braces again? Just for macros?
             case "{": {
                 const type = TokenType.LEFT_BRACE;
                 const lexeme = "{";
@@ -420,6 +421,8 @@ function runScanner(st: State): State {
                 }
 
             // EMPTY_ROW
+            // TODO: Here, use advanceWhile to eat up all whitespace until
+            // TODO: we reach a non-whitespace char.
             case "\n":
                 if (lookahead(st) == "\n") {
                     const type = TokenType.EMPTY_ROW;
@@ -498,28 +501,24 @@ function runScanner(st: State): State {
                     return runScanner(advance(addToken(st, token), totalOffset));
                 }
 
-                // WORD
-                // fix bug with special characters that we dont use in the markup being ignored
-                if (/[a-zA-Z]/.test(c)) {
-                    let i = 1;
-                    const shouldContinue = (i: number) => {
-                        if (st.source.length >= st.position + i) {
-                            return /[a-zA-Z]/.test(st.source[st.position + i]);
-                        } else {
+                // WORD - eats up almost everything else that isn't whitespace.
+                if (/\S/.test(c)) {
+                    const newSt = advanceWhile(st, (curSt) => {
+                        if (/\s/.test(lookahead(curSt)) || /[*%]/.test(lookahead(curSt)))
                             return false;
-                        }
-                    }
+                        if (lookahead(curSt, 2) == "~~" || lookahead(curSt, 2) == "__")
+                            return false;
 
-                    // Loop till whitespace.
-                    while (shouldContinue(i)) i++;
+                        return true;
+                    });
 
                     const type = TokenType.WORD;
-                    const lexeme = c + lookahead(st, i);
+                    const lexeme = substringBetweenStates(st, newSt);
                     const token = createToken(st, type, lexeme);
-                    return runScanner(advance(addToken(st, token), i));
+                    return runScanner(advance(addToken(newSt, token)));
                 }
 
-                // At this point, `c` is just whitespace, so skip over.
+                // At this point c is just whitespace so we move on.
                 return runScanner(advance(st));
         }
     }
@@ -535,4 +534,3 @@ export function scan(src: string): Token[] {
     const finalState = runScanner(st);
     return finalState.tokens;
 }
-
