@@ -165,3 +165,18 @@ export function constrainLexeme(lexeme: string): string {
 export function tokenToStr(token: Token): string {
     return `Token { Type: ${TokenType[token.type]}, Col: ${token.col}, Row: ${token.row}, Lexeme: '${constrainLexeme(token.lexeme)}' };`
 }
+
+// Prints a token with pretty colors :)
+export function printToken(token: Token): void {
+    const str = `%cToken%c { Type: %c${TokenType[token.type]}%c, Col: ${token.col}, Row: ${token.row}, Lexeme: %c'${constrainLexeme(token.lexeme)}'%c };`;
+    console.log(
+        str,
+        "color: blue",
+        "color: default",
+        "color: red",
+        "color: default",
+        "color: green",
+        "color: default"
+    );
+}
+
