@@ -10,11 +10,6 @@
 // TODO: lots of it could be shortened with regexes, so
 // TODO: use them wherever possible.
 
-// TODO: Scan greedily: that is, instead of scanning just "**"
-// TODO: as TokenType.DOUBLE_STAR, when u see "**" that isn't
-// TODO: escaped or anything, scan it up to the next unescaped
-// TODO: "**" and store THAT as a full TokenType.BOLD token.
-
 // TODO: Handle escaping properly, both inside the WORD case
 // TODO: and when encountering a "\\", so that we don't need
 // TODO: to worry about escaping in other chars' cases.
@@ -26,7 +21,7 @@
 // TODO: Maybe for cases that fail (i.e ~ but no ~~), I can just
 // TODO: have them branch to a handleDefault() that will take
 // TODO: care of them. Then I can do
-// TODO: `return runScanner(handleDefault(c))` in the branch.
+// TODO: `return runLexer(handleDefault(c))` in the branch.
 
 import { Token, TokenType, State } from "./types.ts";
 
@@ -45,7 +40,7 @@ import {
 } from "./helpers.ts";
 
 // Recursively scan the source.
-function runScanner(st: State): State {
+function runLexer(st: State): State {
     // Base case, no more source left to scan.
     if (hasSourceLeft(st)) {
         const c = curChar(st);
@@ -58,15 +53,15 @@ function runScanner(st: State): State {
                     const lexeme = "**";
                     const token = createToken(st, type, lexeme);
 
-                    // Add token, advance twice, continue scanning.
-                    return runScanner(advance(addToken(st, token), 2));
+                    // Add token, advance twice, continue lexing.
+                    return runLexer(advance(addToken(st, token), 2));
                 } else {
                     const type = TokenType.STAR;
                     const lexeme = "*";
                     const token = createToken(st, type, lexeme);
 
                     // Advance once since STAR has length one.
-                    return runScanner(advance(addToken(st, token)));
+                    return runLexer(advance(addToken(st, token)));
                 }
 
             // DOUBLE_UNDERSCORE __
@@ -75,9 +70,9 @@ function runScanner(st: State): State {
                     const type = TokenType.DOUBLE_UNDERSCORE;
                     const lexeme = "__";
                     const token = createToken(st, type, lexeme);
-                    return runScanner(advance(addToken(st, token), 2));
+                    return runLexer(advance(addToken(st, token), 2));
                 } else {
-                    return runScanner(handleOther(st, c));
+                    return runLexer(handleOther(st, c));
                 }
 
             // DOUBLE_TILDE ~~
@@ -86,9 +81,9 @@ function runScanner(st: State): State {
                     const type = TokenType.DOUBLE_TILDE;
                     const lexeme = "~~";
                     const token = createToken(st, type, lexeme);
-                    return runScanner(advance(addToken(st, token), 2));
+                    return runLexer(advance(addToken(st, token), 2));
                 } else {
-                    return runScanner(handleOther(st, c));
+                    return runLexer(handleOther(st, c));
                 }
 
             // LEFT_BRACKET [
@@ -96,7 +91,7 @@ function runScanner(st: State): State {
                 const type = TokenType.LEFT_BRACKET;
                 const lexeme = "[";
                 const token = createToken(st, type, lexeme);
-                return runScanner(advance(addToken(st, token)));
+                return runLexer(advance(addToken(st, token)));
             }
 
             // BANG_BRACKET ![
@@ -105,9 +100,9 @@ function runScanner(st: State): State {
                     const type = TokenType.BANG_BRACKET;
                     const lexeme = "![";
                     const token = createToken(st, type, lexeme);
-                    return runScanner(advance(addToken(st, token), 2));
+                    return runLexer(advance(addToken(st, token), 2));
                 } else {
-                    return runScanner(handleOther(st, c));
+                    return runLexer(handleOther(st, c));
                 }
 
             // BRACKET_PAREN ])
@@ -116,9 +111,9 @@ function runScanner(st: State): State {
                     const type = TokenType.BRACKET_PAREN;
                     const lexeme = "](";
                     const token = createToken(st, type, lexeme);
-                    return runScanner(advance(addToken(st, token), 2));
+                    return runLexer(advance(addToken(st, token), 2));
                 } else {
-                    return runScanner(handleOther(st, c));
+                    return runLexer(handleOther(st, c));
                 }
 
             // RIGHT_PAREN
@@ -126,7 +121,7 @@ function runScanner(st: State): State {
                 const type = TokenType.RIGHT_PAREN;
                 const lexeme = ")";
                 const token = createToken(st, type, lexeme);
-                return runScanner(advance(addToken(st, token)));
+                return runLexer(advance(addToken(st, token)));
             }
 
             // LEFT_BRACE
@@ -138,7 +133,7 @@ function runScanner(st: State): State {
                 const type = TokenType.LEFT_BRACE;
                 const lexeme = "{";
                 const token = createToken(st, type, lexeme);
-                return runScanner(advance(addToken(st, token)));
+                return runLexer(advance(addToken(st, token)));
             }
 
             // RIGHT_BRACE
@@ -146,7 +141,7 @@ function runScanner(st: State): State {
                 const type = TokenType.RIGHT_BRACE;
                 const lexeme = "}";
                 const token = createToken(st, type, lexeme);
-                return runScanner(advance(addToken(st, token)));
+                return runLexer(advance(addToken(st, token)));
             }
 
             // HASH, HASHSTAR (DOUBLE/TRIPLE)
@@ -156,35 +151,35 @@ function runScanner(st: State): State {
                     const type = TokenType.TRIPLE_HASHSTAR;
                     const lexeme = "###*";
                     const token = createToken(st, type, lexeme);
-                    return runScanner(advance(addToken(st, token), 4));
+                    return runLexer(advance(addToken(st, token), 4));
                 }
 
                 if (lookahead(st, 2) == "##") {
                     const type = TokenType.TRIPLE_HASH;
                     const lexeme = "###";
                     const token = createToken(st, type, lexeme);
-                    return runScanner(advance(addToken(st, token), 3));
+                    return runLexer(advance(addToken(st, token), 3));
                 }
 
                 if (lookahead(st, 2) == "#*") {
                     const type = TokenType.DOUBLE_HASHSTAR;
                     const lexeme = "##*";
                     const token = createToken(st, type, lexeme);
-                    return runScanner(advance(addToken(st, token), 3));
+                    return runLexer(advance(addToken(st, token), 3));
                 }
 
                 if (lookahead(st) == "#") {
                     const type = TokenType.DOUBLE_HASH;
                     const lexeme = "##";
                     const token = createToken(st, type, lexeme);
-                    return runScanner(advance(addToken(st, token), 2));
+                    return runLexer(advance(addToken(st, token), 2));
                 }
 
                 if (lookahead(st) == "*") {
                     const type = TokenType.HASHSTAR;
                     const lexeme = "#*";
                     const token = createToken(st, type, lexeme);
-                    return runScanner(advance(addToken(st, token), 2));
+                    return runLexer(advance(addToken(st, token), 2));
                 }
 
                 // Again, extra braces to create scope.
@@ -192,7 +187,7 @@ function runScanner(st: State): State {
                     const type = TokenType.HASH;
                     const lexeme = "#";
                     const token = createToken(st, type, lexeme);
-                    return runScanner(advance(addToken(st, token)));
+                    return runLexer(advance(addToken(st, token)));
                 }
 
             // HYPHEN
@@ -202,7 +197,7 @@ function runScanner(st: State): State {
                 const type = TokenType.HYPHEN;
                 const lexeme = "-";
                 const token = createToken(st, type, lexeme);
-                return runScanner(advance(addToken(st, token)));
+                return runLexer(advance(addToken(st, token)));
             }
 
 /*
@@ -239,7 +234,7 @@ function runScanner(st: State): State {
                     const token = createToken(st, type, lexeme);
                     // We advance by i since that's the length
                     // of the lexeme.
-                    return runScanner(advance(addToken(st, token), i));
+                    return runLexer(advance(addToken(st, token), i));
                 }
 */
 
@@ -250,7 +245,7 @@ function runScanner(st: State): State {
                 });
 
                 // One more advance to move past the \n.
-                return runScanner(advance(newSt));
+                return runLexer(advance(newSt));
             }
 
             // AT_DELIM
@@ -271,11 +266,11 @@ function runScanner(st: State): State {
                     const token = createToken(st, type, lexeme);
 
                     // Add it to the newSt and move on.
-                    return runScanner(addToken(newSt, token));
+                    return runLexer(addToken(newSt, token));
                 } else {
                     // If it's just a lone @ we go to the default
                     // case which will treat it like a WORD (hopefully?)
-                    return runScanner(handleOther(st, c));
+                    return runLexer(handleOther(st, c));
                 }
             }
 
@@ -293,16 +288,16 @@ function runScanner(st: State): State {
                     // so it's fine.
                     const lexeme = "\n";
                     const token = createToken(st, type, lexeme);
-                    return runScanner(addToken(newSt, token));
+                    return runLexer(addToken(newSt, token));
                 } else {
                     // If it's not an empty row then we just ignore the
                     // newline and continue on.
-                    return runScanner(advance(st));
+                    return runLexer(advance(st));
                 }
 
             // DEFAULT CASE
             default:
-                return runScanner(handleOther(st, c));
+                return runLexer(handleOther(st, c));
         }
     }
 
@@ -414,9 +409,9 @@ function handleOther(st: State, c: string): State {
     return advance(st);
 }
 
-// Starts the scanner and returns the final tokens.
-export function scan(src: string): Token[] {
+// Starts the lexer and returns the final tokens.
+export function lex(src: string): Token[] {
     const st = newState(src);
-    const finalState = runScanner(st);
+    const finalState = runLexer(st);
     return finalState.tokens;
 }

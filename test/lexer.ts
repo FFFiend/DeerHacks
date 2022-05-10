@@ -1,10 +1,10 @@
-import { scan } from "../lib/lexer/lexer.ts";
-import { tokenToStr } from "../lib/lexer/helpers.ts";
+import { lex } from "../lib/lexer/lexer.ts";
+import { printToken } from "../lib/lexer/helpers.ts";
 
 const sample = "word1 : word2";
 
-const tokens = scan(sample);
+const tokens = lex(sample);
 
 for (const token of tokens) {
-    console.log(tokenToStr(token));
+    printToken(token);
 }

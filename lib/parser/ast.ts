@@ -101,6 +101,8 @@ export type AST = Node[]
 // So we can index the enum to determine Branch/Leaf type...
 type EnumObj = {[index: string | number]: string | number};
 
+// TODO: The alignment is a bit messed up, and each node takes too much space,
+// TODO: try to make it more compact like with tokens.
 export function nodeToStr(node: Node): string {
     // The node is a branch node if it has the `children` field.
     const type: EnumObj = Object.keys(node).includes("children") ? BranchType : LeafType;
