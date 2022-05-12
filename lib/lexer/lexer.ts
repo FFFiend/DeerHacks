@@ -1,20 +1,3 @@
-// Scans raw source to a list of tokens.
-
-// TODO: Handle escaping properly, both inside the WORD case
-// TODO: and when encountering a "\\", so that we don't need
-// TODO: to worry about escaping in other chars' cases.
-// TODO: The idea is that we encounter a the escape char \ before
-// TODO: the char being escaped, so we can handle the escape
-// TODO: early instead of using lookback in other chars' cases.
-// TODO: Eventually, I shouldn't need lookback at all.
-
-// TODO: Maybe for cases that fail (i.e ~ but no ~~), I can just
-// TODO: have them branch to a handleDefault() that will take
-// TODO: care of them. Then I can do
-// TODO: `return runLexer(handleDefault(c))` in the branch.
-
-import { Token, TokenType, State } from "./types.ts";
-
 import {
     advance,
     curChar,
@@ -31,288 +14,235 @@ import {
     substringBetweenStates
 } from "./helpers.ts";
 
+import { Token, TokenType, State } from "./types.ts";
+
 // Recursively scan the source.
 function runLexer(st: State): State {
     // Base case, no more source left to scan.
-    if (hasSourceLeft(st)) {
-        const c = curChar(st);
+    // We just return the state we have.
+    if (!hasSourceLeft(st)) return st;
 
-        switch (c) {
-            // STAR, DOUBLE_STAR *, **
-            case "*":
-                if (lookahead(st) == "*") {
-                    const type = TokenType.DOUBLE_STAR;
-                    const lexeme = "**";
-                    const token = createToken(st, type, lexeme);
+    const c = curChar(st);
 
-                    // Add token, advance twice, continue lexing.
-                    return runLexer(advance(addToken(st, token), 2));
-                } else {
-                    const type = TokenType.STAR;
-                    const lexeme = "*";
-                    const token = createToken(st, type, lexeme);
-
-                    // Advance once since STAR has length one.
-                    return runLexer(advance(addToken(st, token)));
-                }
-
-            // DOUBLE_UNDERSCORE __
-            case "_":
-                if (lookahead(st) == "_") {
-                    const type = TokenType.DOUBLE_UNDERSCORE;
-                    const lexeme = "__";
-                    const token = createToken(st, type, lexeme);
-                    return runLexer(advance(addToken(st, token), 2));
-                } else {
-                    return runLexer(handleOther(st));
-                }
-
-            // DOUBLE_TILDE ~~
-            case "~":
-                if (lookahead(st) == "~") {
-                    const type = TokenType.DOUBLE_TILDE;
-                    const lexeme = "~~";
-                    const token = createToken(st, type, lexeme);
-                    return runLexer(advance(addToken(st, token), 2));
-                } else {
-                    return runLexer(handleOther(st));
-                }
-
-            // LEFT_BRACKET [
-            case "[": {
-                const type = TokenType.LEFT_BRACKET;
-                const lexeme = "[";
+    switch (c) {
+        // STAR, DOUBLE_STAR *, **
+        case "*": {
+            if (lookahead(st) == "*") {
+                const type = TokenType.DOUBLE_STAR;
+                const lexeme = "**";
                 const token = createToken(st, type, lexeme);
+
+                // Add token, advance twice, continue lexing.
+                return runLexer(advance(addToken(st, token), 2));
+            } else {
+                const type = TokenType.STAR;
+                const lexeme = "*";
+                const token = createToken(st, type, lexeme);
+
+                // Advance once since STAR has length one.
                 return runLexer(advance(addToken(st, token)));
             }
+        }
 
-            // BANG_BRACKET ![
-            case "!":
-                if (lookahead(st) == "[") {
-                    const type = TokenType.BANG_BRACKET;
-                    const lexeme = "![";
-                    const token = createToken(st, type, lexeme);
-                    return runLexer(advance(addToken(st, token), 2));
-                } else {
-                    return runLexer(handleOther(st));
-                }
-
-            // BRACKET_PAREN ])
-            case "]":
-                if (lookahead(st) == "(") {
-                    const type = TokenType.BRACKET_PAREN;
-                    const lexeme = "](";
-                    const token = createToken(st, type, lexeme);
-                    return runLexer(advance(addToken(st, token), 2));
-                } else {
-                    return runLexer(handleOther(st));
-                }
-
-            // RIGHT_PAREN
-            case ")": {
-                const type = TokenType.RIGHT_PAREN;
-                const lexeme = ")";
+        // DOUBLE_UNDERSCORE __
+        case "_": {
+            if (lookahead(st) == "_") {
+                const type = TokenType.DOUBLE_UNDERSCORE;
+                const lexeme = "__";
                 const token = createToken(st, type, lexeme);
-                return runLexer(advance(addToken(st, token)));
+                return runLexer(advance(addToken(st, token), 2));
+            } else {
+                return runLexer(handleOther(st));
             }
+        }
 
-            // LEFT_BRACE
-            // TODO: Why do we parse braces again? Just for macros?
-            // TODO: Can't I just eat up the whole line for macro
-            // TODO: definitions and then parse it properly in the
-            // TODO: parser stage?
-            case "{": {
-                const type = TokenType.LEFT_BRACE;
-                const lexeme = "{";
+        // DOUBLE_TILDE ~~
+        case "~": {
+            if (lookahead(st) == "~") {
+                const type = TokenType.DOUBLE_TILDE;
+                const lexeme = "~~";
                 const token = createToken(st, type, lexeme);
-                return runLexer(advance(addToken(st, token)));
+                return runLexer(advance(addToken(st, token), 2));
+            } else {
+                return runLexer(handleOther(st));
             }
+        }
 
-            // RIGHT_BRACE
-            case "}": {
-                const type = TokenType.RIGHT_BRACE;
-                const lexeme = "}";
+        // LEFT_BRACKET [
+        case "[": {
+            const type = TokenType.LEFT_BRACKET;
+            const lexeme = "[";
+            const token = createToken(st, type, lexeme);
+            return runLexer(advance(addToken(st, token)));
+        }
+
+        // BANG_BRACKET ![
+        case "!": {
+            if (lookahead(st) == "[") {
+                const type = TokenType.BANG_BRACKET;
+                const lexeme = "![";
                 const token = createToken(st, type, lexeme);
-                return runLexer(advance(addToken(st, token)));
+                return runLexer(advance(addToken(st, token), 2));
+            } else {
+                return runLexer(handleOther(st));
             }
+        }
 
-            // HASH, HASHSTAR (DOUBLE/TRIPLE)
-            // TODO: Newline checks. Also space-after-token check.
-            // TODO: Also, can't I just scan the whole line in one go,
-            // TODO: and then recursively scan the inner stuff?
-            // TODO: Or in the parser I could just take everything
-            // TODO: in the same row? Feels a bit hacky though.
-            case "#": {
-                // Headings need to be at the start of a new line.
-                if (lookback(st) != "\n") {
-                    return runLexer(handleOther(st));
-                }
+        // BRACKET_PAREN ])
+        case "]": {
+            if (lookahead(st) == "(") {
+                const type = TokenType.BRACKET_PAREN;
+                const lexeme = "](";
+                const token = createToken(st, type, lexeme);
+                return runLexer(advance(addToken(st, token), 2));
+            } else {
+                return runLexer(handleOther(st));
+            }
+        }
 
-                // Headings also need to be followed by a space
-                // character.
-                if (lookahead(st, 4) == "##* ") {
-                    const type = TokenType.TRIPLE_HASHSTAR;
-                    const lexeme = "###*";
-                    const token = createToken(st, type, lexeme);
-                    return runLexer(advance(addToken(st, token), 4));
-                }
+        // RIGHT_PAREN
+        case ")": {
+            const type = TokenType.RIGHT_PAREN;
+            const lexeme = ")";
+            const token = createToken(st, type, lexeme);
+            return runLexer(advance(addToken(st, token)));
+        }
 
-                if (lookahead(st, 3) == "## ") {
-                    const type = TokenType.TRIPLE_HASH;
-                    const lexeme = "###";
-                    const token = createToken(st, type, lexeme);
-                    return runLexer(advance(addToken(st, token), 3));
-                }
-
-                if (lookahead(st, 3) == "#* ") {
-                    const type = TokenType.DOUBLE_HASHSTAR;
-                    const lexeme = "##*";
-                    const token = createToken(st, type, lexeme);
-                    return runLexer(advance(addToken(st, token), 3));
-                }
-
-                if (lookahead(st, 2) == "# ") {
-                    const type = TokenType.DOUBLE_HASH;
-                    const lexeme = "##";
-                    const token = createToken(st, type, lexeme);
-                    return runLexer(advance(addToken(st, token), 2));
-                }
-
-                if (lookahead(st, 2) == "* ") {
-                    const type = TokenType.HASHSTAR;
-                    const lexeme = "#*";
-                    const token = createToken(st, type, lexeme);
-                    return runLexer(advance(addToken(st, token), 2));
-                }
-
-                if (lookahead(st) == " ") {
-                    // Again, extra braces to create scope.
-                    const type = TokenType.HASH;
-                    const lexeme = "#";
-                    const token = createToken(st, type, lexeme);
-                    return runLexer(advance(addToken(st, token)));
-                }
-
-                // Not a heading.
+        // HASH, HASHSTAR (DOUBLE/TRIPLE)
+        // NOTE: In the parser, the heading will consist
+        // NOTE: of all the tokens on the same row. The lexeme
+        // NOTE: will only contain the heading symbol itself,
+        // NOTE: not the entire line.
+        case "#": {
+            // Headings need to be at the start of a new line.
+            if (lookback(st) != "\n") {
                 return runLexer(handleOther(st));
             }
 
-            // HYPHEN
-            // TODO: Do a lookback here for \n to make sure
-            // TODO: it's for a list. Same for N_DOT.
-            case "-": {
-                if (lookback(st) == "\n" && lookahead(st) == " ") {
-                    const type = TokenType.UL_ITEM;
-                    const lexeme = "-";
-                    const token = createToken(st, type, lexeme);
-                    return runLexer(advance(addToken(st, token)));
-                }
+            // Headings also need to be followed by a space
+            // character.
+            if (lookahead(st, 4) == "##* ") {
+                const type = TokenType.TRIPLE_HASHSTAR;
+                const lexeme = "###*";
+                const token = createToken(st, type, lexeme);
+                return runLexer(advance(addToken(st, token), 4));
             }
 
-/*
-            // MACRO
-            // TODO: Actually, there can be spaces inside the macro's
-            // TODO: param as well. E.g. \textit{a b c}. So I need to
-            // TODO: check for braces as well, before space.
-            case "\\":
-                // White space regex
-                const re = /\s/;
-                // Offset from current state position.
-                let i = 1;
-                // Helper for loop condition.
-                const shouldContinue = (i) => {
-                    // If i is within bounds, test for whitespace.
-                    // We keep looping as long as the i'th char from
-                    // current position is NOT whitespace.
-                    if (st.position + i <= st.source.length) {
-                        return !re.test(st.source[st.position + i]);
-                    } else {
-                        // If i goes out of bounds, we stop looping.
-                        return false;
-                    }
-                }
-
-                // Keep increasing i until we're unable to continue.
-                while (shouldContinue(i)) i++;
-
-                // i strictly greater than 1 means we have a proper
-                // \XYZ instead of a lone "\"
-                if (i > 1) {
-                    const type = TokenType.MACRO;
-                    const lexeme = lookahead(st, i);
-                    const token = createToken(st, type, lexeme);
-                    // We advance by i since that's the length
-                    // of the lexeme.
-                    return runLexer(advance(addToken(st, token), i));
-                }
-*/
-
-            // Comments
-            case "%": {
-                const newSt = advanceWhile(st, (curSt) => {
-                    return curChar(curSt) != "\n";
-                });
-
-                // One more advance to move past the \n.
-                return runLexer(advance(newSt));
+            if (lookahead(st, 3) == "## ") {
+                const type = TokenType.TRIPLE_HASH;
+                const lexeme = "###";
+                const token = createToken(st, type, lexeme);
+                return runLexer(advance(addToken(st, token), 3));
             }
 
-            // AT_DELIM
-            case "@": {
-                const newSt = advanceWhile(st, (curSt) => {
-                    const samePosition = curSt.position == st.position;
-                    const nonWhitespace = /\S/.test(curChar(curSt));
-                    return samePosition || nonWhitespace;
-                });
-
-                // Make sure we actually moved before adding the
-                // token, otherwise it's just a lone '@'
-                if (newSt.position > st.position) {
-                    const type = TokenType.AT_DELIM;
-                    // -1 because the newSt's position is the whitespace
-                    // char after the @XYZ.
-                    const lexeme = lookahead(st, newSt.position - 1);
-                    const token = createToken(st, type, lexeme);
-
-                    // Add it to the newSt and move on.
-                    return runLexer(addToken(newSt, token));
-                } else {
-                    // If it's just a lone @ we go to the default
-                    // case which will treat it like a WORD (hopefully?)
-                    return runLexer(handleOther(st));
-                }
+            if (lookahead(st, 3) == "#* ") {
+                const type = TokenType.DOUBLE_HASHSTAR;
+                const lexeme = "##*";
+                const token = createToken(st, type, lexeme);
+                return runLexer(advance(addToken(st, token), 3));
             }
 
-            // EMPTY_ROW
-            case "\n":
-                if (lookahead(st) == "\n") {
-                    // Eat up all the whitespace.
-                    const newSt = advanceWhile(st, (curSt) => {
-                        return /\s/.test(curChar(curSt));
-                    });
+            if (lookahead(st, 2) == "# ") {
+                const type = TokenType.DOUBLE_HASH;
+                const lexeme = "##";
+                const token = createToken(st, type, lexeme);
+                return runLexer(advance(addToken(st, token), 2));
+            }
 
-                    const type = TokenType.EMPTY_ROW;
-                    // Obviously the lexeme might not just be a newline,
-                    // but we won't be doing anything with this lexeme
-                    // so it's fine.
-                    const lexeme = "\n";
-                    const token = createToken(st, type, lexeme);
-                    return runLexer(addToken(newSt, token));
-                } else {
-                    // If it's not an empty row then we just ignore the
-                    // newline and continue on.
-                    return runLexer(advance(st));
-                }
+            if (lookahead(st, 2) == "* ") {
+                const type = TokenType.HASHSTAR;
+                const lexeme = "#*";
+                const token = createToken(st, type, lexeme);
+                return runLexer(advance(addToken(st, token), 2));
+            }
 
-            // DEFAULT CASE
-            default:
+            if (lookahead(st) == " ") {
+                const type = TokenType.HASH;
+                const lexeme = "#";
+                const token = createToken(st, type, lexeme);
+                return runLexer(advance(addToken(st, token)));
+            }
+
+            // Not a heading.
+            return runLexer(handleOther(st));
+        }
+
+        // UL_ITEM
+        case "-": {
+            // Needs to be at the start of the line and with a
+            // space following it.
+            if (lookback(st) == "\n" && lookahead(st) == " ") {
+                const type = TokenType.UL_ITEM;
+                const lexeme = "-";
+                const token = createToken(st, type, lexeme);
+                return runLexer(advance(addToken(st, token)));
+            } else {
                 return runLexer(handleOther(st));
+            }
+        }
+
+        // Comments
+        case "%": {
+            // Eat everything until a newline.
+            const newSt = advanceWhile(st, curSt => curChar(curSt) != "\n");
+            // One more advance to move past the \n.
+            return runLexer(advance(newSt));
+        }
+
+        // AT_DELIM
+        case "@": {
+            const newSt = advanceWhile(st, (curSt) => {
+                const samePosition = curSt.position == st.position;
+                const nonWhitespace = /\S/.test(curChar(curSt));
+
+                return samePosition || nonWhitespace;
+            });
+
+            // Make sure we actually moved before adding the
+            // token, otherwise it's just a lone '@'
+            if (newSt.position > st.position) {
+                const type = TokenType.AT_DELIM;
+                // -1 because the newSt's position is the whitespace
+                // char after the @XYZ.
+                const lexeme = lookahead(st, newSt.position - 1);
+                const token = createToken(st, type, lexeme);
+
+                // Add it to the newSt and move on.
+                return runLexer(addToken(newSt, token));
+            } else {
+                // If it's just a lone @ we go to the default
+                // case which will treat it like a WORD (hopefully?)
+                return runLexer(handleOther(st));
+            }
+        }
+
+        // EMPTY_ROW
+        case "\n": {
+            if (lookahead(st) == "\n") {
+                // Eat up all the whitespace.
+                const newSt = advanceWhile(st, (curSt) => {
+                    return /\s/.test(curChar(curSt));
+                });
+
+                const type = TokenType.EMPTY_ROW;
+                // Obviously the lexeme might not just be a newline,
+                // but we won't be doing anything with this lexeme
+                // so it's fine.
+                const lexeme = "\n";
+                const token = createToken(st, type, lexeme);
+                return runLexer(addToken(newSt, token));
+            } else {
+                // If it's not an empty row then we just ignore the
+                // newline and continue on.
+                return runLexer(advance(st));
+            }
+        }
+
+        // DEFAULT CASE
+        default: {
+            return runLexer(handleOther(st));
         }
     }
-
-    // If there's no source left, we just return the
-    // state we have.
-    return st;
 }
 
 // The default case for the switch statement, when
