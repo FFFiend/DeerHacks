@@ -1,3 +1,5 @@
+import { Token, TokenType, State } from "./types.ts";
+
 import {
     advance,
     curChar,
@@ -13,8 +15,6 @@ import {
     advanceWhileEscaping,
     substringBetweenStates
 } from "./helpers.ts";
-
-import { Token, TokenType, State } from "./types.ts";
 
 // Recursively scan the source.
 function runLexer(st: State): State {

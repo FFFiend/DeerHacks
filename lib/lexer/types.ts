@@ -1,40 +1,31 @@
 // Token types
 export enum TokenType {
-    // '*', '**'
-    STAR, DOUBLE_STAR,
-    // '__'
-    DOUBLE_UNDERSCORE,
-    // '~~'
-    DOUBLE_TILDE,
+    // Start-of-File, End-of-File
+    SOF, EOF,
 
-    // '[', '!['
-    LEFT_BRACKET, BANG_BRACKET,
-    // '](', ')'
-    BRACKET_PAREN, RIGHT_PAREN,
-    // '{' and '}'
-    LEFT_BRACE, RIGHT_BRACE,
-
-    // '#', '##', '###'
-    HASH, DOUBLE_HASH, TRIPLE_HASH,
-    // '#*', '##*', '###*'
-    HASHSTAR, DOUBLE_HASHSTAR, TRIPLE_HASHSTAR,
-
+    // Plain text word.
+    WORD,
     // '@' delimiter
     AT_DELIM,
-    // '-', denotes unnumbered lists
-    UL_ITEM,
-    // A number followed by a dot (for numbered lists).
-    OL_ITEM,
-    // LaTeX macro, i.e '\XYZ'
-    MACRO_CALL,
+    // An empty line
+    EMPTY_ROW,
     // Markup macro definition.
     MACRO_DEF,
     // 'TEX <<< ...' and '...'
     HEREDOC_BLOCK,
-    // An empty line
-    EMPTY_ROW,
-    // Plain text word (delimited by whitespace).
-    WORD,
+    // Unnumbered/Numbered list items.
+    UL_ITEM, OL_ITEM,
+
+    // '*', '**', '__', '~~'
+    STAR, DOUBLE_STAR, DOUBLE_UNDERSCORE, DOUBLE_TILDE,
+
+    // '[', '![', '](', ')'
+    LEFT_BRACKET, BANG_BRACKET,
+    BRACKET_PAREN, RIGHT_PAREN,
+
+    // '#', '##', '###' and star variants.
+    HASH, DOUBLE_HASH, TRIPLE_HASH,
+    HASHSTAR, DOUBLE_HASHSTAR, TRIPLE_HASHSTAR,
 }
 
 // Token object
