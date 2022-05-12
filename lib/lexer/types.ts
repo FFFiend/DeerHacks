@@ -19,23 +19,20 @@ export enum TokenType {
     // '#*', '##*', '###*'
     HASHSTAR, DOUBLE_HASHSTAR, TRIPLE_HASHSTAR,
 
+    // '@' delimiter
+    AT_DELIM,
     // '-', denotes unnumbered lists
-    HYPHEN,
-    // An empty line
-    EMPTY_ROW,
+    UL_ITEM,
+    // A number followed by a dot (for numbered lists).
+    OL_ITEM,
     // LaTeX macro, i.e '\XYZ'
     MACRO_CALL,
     // Markup macro definition.
     MACRO_DEF,
-    // '@' delimiter
-    AT_DELIM,
-    // A number followed by a dot (which will be used
-    // to check for numbered lists).
-    N_DOT,
-    // Keyword 'macro'
-    KW_MACRO,
     // 'TEX <<< ...' and '...'
     HEREDOC_BLOCK,
+    // An empty line
+    EMPTY_ROW,
     // Plain text word (delimited by whitespace).
     WORD,
 }
