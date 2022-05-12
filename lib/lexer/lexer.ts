@@ -1,4 +1,5 @@
 import { Token, TokenType, State } from "./types.ts";
+import { UnrecognizedCharError, UnclosedSequenceError } from "./errors.ts";
 
 import {
     advance,
@@ -8,6 +9,7 @@ import {
     lookback,
     lookahead,
     escapeWord,
+    attachError,
     createToken,
     charAtOffset,
     advanceWhile,
@@ -265,6 +267,7 @@ function handleOther(st: State): State {
         return handleHeredoc(st);
     }
 
+    // WORD
     if (/\S/.test(c)) {
         return handleWord(st);
     }
@@ -275,9 +278,11 @@ function handleOther(st: State): State {
     }
 
     // At this point, c is an unrecognized character.
-    // TODO: Throw error on unrecognized chars instead of
-    // TODO: just ignoring them as we do right now.
-    return advance(st);
+    const err = new UnrecognizedCharError(st);
+    // Attach error to state.
+    const newSt = attachError(st, err);
+    // Continue on.
+    return advance(newSt);
 }
 
 // OL_ITEM
@@ -353,5 +358,17 @@ function handleWord(st: State): State {
 export function lex(src: string): Token[] {
     const st = newState(src);
     const finalState = runLexer(st);
+
+    // Print errors if any.
+    if (finalState.errors.length > 0) {
+        finalState.errors.forEach(e => e.print());
+    }
+
+    // Check if any errors were fatal. If so,
+    // we don't return any tokens.
+    if (finalState.errors.some(e => e.fatal)) {
+        return [];
+    }
+
     return finalState.tokens;
 }

@@ -2,6 +2,7 @@ import {
     Token,
     State,
     TokenType,
+    LexerError,
 } from "./types.ts"
 
 
@@ -12,7 +13,19 @@ export function newState(src: string): State {
         tokens: [],
         position: 0,
         col: 1,
-        row: 1
+        row: 1,
+        errors: []
+    };
+}
+
+export function attachError(oldState: State, err: LexerError): State {
+    return {
+        source: oldState.source,
+        tokens: oldState.tokens,
+        position: oldState.position,
+        col: oldState.col,
+        row: oldState.row,
+        errors: [...oldState.errors, err]
     };
 }
 
@@ -39,7 +52,8 @@ export function addToken(oldState: State, token: Token): State {
         tokens: [...oldState.tokens, token],
         position: oldState.position,
         col: oldState.col,
-        row: oldState.row
+        row: oldState.row,
+        errors: [...oldState.errors]
     };
 }
 
@@ -56,7 +70,8 @@ export function advanceOnce(oldState: State): State {
             tokens: [...oldState.tokens],
             position: oldState.position + 1,
             col: isEndOfLine ? 1 : oldState.col + 1,
-            row: isEndOfLine ? oldState.row + 1 : oldState.row
+            row: isEndOfLine ? oldState.row + 1 : oldState.row,
+            errors: [...oldState.errors]
         }
     } else {
         return oldState;

@@ -1,3 +1,5 @@
+import { UnrecognizedCharError, UnclosedSequenceError } from "./errors.ts";
+
 // Token types
 export enum TokenType {
     // Start-of-File, End-of-File
@@ -39,11 +41,15 @@ export type Token = {
     row: number
 }
 
+// Just two types of errors for the lexer.
+export type LexerError = UnrecognizedCharError | UnclosedSequenceError;
+
 // Keep track of scanner state.
 export type State = {
     source: string,
     tokens: Token[],
     position: number,
     col: number,
-    row: number
+    row: number,
+    errors: LexerError[]
 }
