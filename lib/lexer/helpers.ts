@@ -161,6 +161,26 @@ export function constrainLexeme(lexeme: string): string {
     }
 }
 
+// Escapes the following chars: \, *, %, ~, _
+export function escapeWord(str: string): string {
+    let acc = "";
+    let i = 0;
+    while (i < str.length) {
+        if (str[i] == "\\") {
+            if (/[\\*%~_]/.test(str[i+1])) {
+                acc = acc + str[i+1];
+                i = i + 2;
+                continue;
+            }
+        } else {
+            acc = acc + str[i];
+            i = i + 1;
+        }
+    }
+
+    return acc;
+}
+
 // Returns a string representation of the given token.
 export function tokenToStr(token: Token): string {
     return `Token { Type: ${TokenType[token.type]}, Col: ${token.col}, Row: ${token.row}, Lexeme: '${constrainLexeme(token.lexeme)}' };`
