@@ -1,7 +1,27 @@
-// Parse tokens into ...???
+// Parse tokens into AST.
+import { Token, TokenType } from "../lexer/types.ts";
 
-import { Token, TokenType } from "../lexer/types.ts"
-import { AST, NodeType, LeafType, BranchType, Node } from "./ast.ts"
+import {
+    AST,
+    Node,
+    State,
+    NodeType,
+    LeafType,
+    BranchType
+} from "./types.ts";
+
+import {
+    addNode,
+    advance,
+    curToken,
+    newState,
+    lookahead,
+    createLeaf,
+    advanceWhile,
+    createBranch,
+    hasTokensLeft,
+    subListBetweenStates
+} from "./helpers.ts";
 
 // TODO: Javascript actually just creates shallow copies
 // TODO: pretty much everywhere :(
@@ -16,177 +36,110 @@ import { AST, NodeType, LeafType, BranchType, Node } from "./ast.ts"
 // TODO: and EMPTY_ROW end a para, and everything else starts
 // TODO: a new para or continues the previous.
 
-// Keep track of parser state.
-type State = {
-    tokens: Token[],
-    position: number,
-    tree: AST
-}
-
-// Returns a new state object given list of tokens.
-function newState(tokens: Token[]): State {
-    return {
-        tokens: tokens,
-        position: 0,
-        tree: []
-    };
-}
-
-// Returns a leaf node object given current state, node type
-// and node data.
-function createLeaf(state: State, type: LeafType, data: string): Node {
-    return {
-        col: curToken(state).col,
-        row: curToken(state).row,
-        position: state.position,
-        type,
-        data
-    };
-}
-
-// Returns a branch node object given state, type, data (possibly null)
-// and children.
-function createBranch(state: State, type: BranchType, data: string | null, children: Node[]): Node {
-    return {
-        col: curToken(state).col,
-        row: curToken(state).row,
-        position: state.position,
-        type,
-        data,
-        children
-    };
-}
-
-// Returns a new copy of the state with the given node
-// added to the AST tree.
-function addNode(oldState: State, node: Node): State {
-    return {
-        tokens: [...oldState.tokens],
-        position: oldState.position,
-        tree: [...oldState.tree, node]
-    };
-}
-
-// Advances state onto the next token.
-function advanceOnce(oldState: State): State {
-    if (hasTokensLeft(oldState)) {
-        return {
-            tokens: [...oldState.tokens],
-            position: oldState.position + 1,
-            tree: [...oldState.tree]
-        };
-    } else {
-        return oldState;
-    }
-}
-
-// Advances the state `n` times, defaults to once.
-function advance(oldState: State, n: number = 1): State {
-    if (n == 1) return advanceOnce(oldState);
-    else return advance(advanceOnce(oldState), n - 1);
-}
-
-// Advances state as long as predicate returns true on the
-// state at each step and there are still tokens left.
-function advanceWhile(oldState: State, fn: (s: State) => boolean): State {
-    if (hasTokensLeft(oldState) && fn(oldState)) {
-        return advanceWhile(advanceOnce(oldState), fn);
-    } else {
-        return oldState;
-    }
-}
-
-// Returns the sub-list between two states' positions,
-// including the tokens at each state's current positions.
-function subListBetweenStates(stateA: State, stateB: State): Token[] {
-    const tokenList = stateA.tokens;
-    const posA = stateA.position;
-    const posB = stateB.position;
-
-    const start = Math.min(posA, posB);
-    const end   = Math.max(posA, posB);
-
-    return tokenList.slice(start, end + 1);
-}
-
-// Returns the next n tokens in the list.
-function lookahead(state: State, n: number = 1): Token[] {
-    const { tokens, position } = state;
-
-    const lookaheadPosition = position + n;
-    const bound = tokens.length;
-
-    const start = position + 1;
-    const end   = Math.min(lookaheadPosition, bound) + 1;
-    return tokens.slice(start, end);
-}
-
-// Current token at state position.
-function curToken(st: State): Token {
-    return st.tokens[st.position];
-}
-
-function hasTokensLeft(st: State): boolean {
-    return st.position < st.tokens.length;
-}
-
 function runParser(st: State): State {
-    if (hasTokensLeft(st)) {
-        const t = curToken(st);
+    // End when no tokens left, just like lexer.
+    if (!hasTokensLeft(st)) return st;
 
-        switch (t.type) {
-            // BOLD
-            case TokenType.DOUBLE_STAR: {
-                const predicate = (s: State) => {
-                    return (
-                        // Till we reach a DOUBLE_STAR or if we're at the
-                        // same token as st (since the curren is also **)
-                        curToken(s).type != TokenType.DOUBLE_STAR
-                        || s.position == st.position
-                    );
-                };
+    const t = curToken(st);
 
-                // Advance till next bold
-                const newSt = advanceWhile(st, predicate);
-                // Take the sub-list between them and recursively
-                // parse that sub-list with a new state.
-                const subList = subListBetweenStates(st, newSt);
-                // We slice it to exclude the DOUBLE_STAR tokens
-                // at the start and end, otherwise it will keep
-                // recursing infinitely.
-                const subState = newState(subList.slice(1,-1));
-                // We parse the stuff inside the DOUBLE_STAR and
-                // take the resulting AST.
-                const subTree = runParser(subState).tree;
+    switch (t.type) {
+        // ITALIC
+        case TokenType.STAR: {
+            return runParser(
+                handleEnclosed(st, TokenType.STAR, BranchType.ITALIC)
+            );
+        }
 
-                // Create node
-                const type = BranchType.BOLD;
-                const data = null;
-                const children = subTree;
-                const node = createBranch(st, type, data, children);
+        // BOLD
+        case TokenType.DOUBLE_STAR: {
+            return runParser(
+                handleEnclosed(st, TokenType.DOUBLE_STAR, BranchType.BOLD)
+            );
+        }
 
-                // Add the node, and then advance (since the state
-                // is currently sitting at the closing DOUBLE_STAR)
-                // and continue parsing.
-                return runParser(advance(addNode(newSt, node)));
-            }
+        // STRIKETHROUGH
+        case TokenType.DOUBLE_TILDE: {
+            return runParser(
+                handleEnclosed(
+                    st,
+                    TokenType.DOUBLE_TILDE,
+                    BranchType.STRIKETHROUGH
+                )
+            );
+        }
 
-            // WORD
-            case TokenType.WORD: {
-                const type = LeafType.WORD
-                const data = t.lexeme;
-                const node = createLeaf(st, type, data);
+        // UNDERLINE
+        case TokenType.DOUBLE_UNDERSCORE: {
+            return runParser(
+                handleEnclosed(
+                    st,
+                    TokenType.DOUBLE_UNDERSCORE,
+                    BranchType.UNDERLINE
+                )
+            );
+        }
 
-                return runParser(advance(addNode(st, node)));
-            }
+        // WORD
+        case TokenType.WORD: {
+            const type = LeafType.WORD
+            const data = t.lexeme;
+            const node = createLeaf(st, type, data);
+            return runParser(advance(addNode(st, node)));
+        }
 
-            default: {
-                return runParser(advance(st));
-            }
+        default: {
+            // TODO: This should be an error.
+            return runParser(advance(st));
         }
     }
+}
 
-    return st;
+// Handles stuff enclosed within delimiters, e.g.
+// **bold text** enclosed within DOUBLE_STARS,
+// __underlined stuff__ enclosed within
+// DOUBLE_UNDERSCORE and so on. The function expects
+// that the state is already ON the token that starts
+// the enclosed sequence. The second argument is the token
+// type that indicates the end of the sequence (i.e the
+// closing token type). The last is the type of the node
+// to create and add to the AST. Note that this is a
+// BranchType since LeafTypes do not have this recursive
+// structure. Some "enclosed" LeafTypes like $$ math
+// delimiters are handled during lexing and are not
+// considered "enclosed" during the parsing stage.
+function handleEnclosed(st: State, endType: TokenType, nodeType: BranchType) {
+    // Advance till we reach the closing endType or
+    // if we're at the same token as st (since it's possible
+    // the opening and closing types are the same and
+    // we're already sitting on that token which would
+    // cause advanceWhile to immediately finish otherwise).
+    const newSt = advanceWhile(st, (curSt) => {
+        const samePosition = curSt.position == st.position;
+        const unclosed = curToken(curSt).type != endType;
+        return samePosition || unclosed;
+    });
+
+    // Take the inner sub-list of tokens between the open
+    // and close tokens and recursively parse that sub-list
+    // with a new state, to get the inner AST.
+    // We also slice the sub-list exclude the opening and
+    // closing tokens at the start and end, otherwise 
+    // it will keep recursing infinitely on them.
+    const subList = subListBetweenStates(st, newSt);
+    const subState = newState(subList.slice(1,-1));
+    const subTree = runParser(subState).tree;
+
+    // Create node
+    const type = nodeType;
+    // We assume there's no data.
+    const data = null;
+    const children = subTree;
+    const node = createBranch(st, type, data, children);
+
+    // Add the node, advance once (since the state
+    // is currently sitting at the closing token),
+    // and return the state.
+    return advance(addNode(newSt, node));
 }
 
 export function parse(tokens: Token[]): AST {
@@ -194,4 +147,3 @@ export function parse(tokens: Token[]): AST {
     const finalState = runParser(state);
     return finalState.tree;
 }
-
