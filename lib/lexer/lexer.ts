@@ -1,15 +1,5 @@
 // Scans raw source to a list of tokens.
 
-// TODO: Some patterns repeat (e.g MACRO and AT_DELIM)
-// TODO: and are basically the same, the logic could be
-// TODO: pulled out into it's own func.
-
-// TODO: pull stuff out of switch statements into its
-// TODO: own function.
-
-// TODO: lots of it could be shortened with regexes, so
-// TODO: use them wherever possible.
-
 // TODO: Handle escaping properly, both inside the WORD case
 // TODO: and when encountering a "\\", so that we don't need
 // TODO: to worry about escaping in other chars' cases.
@@ -32,6 +22,7 @@ import {
     addToken,
     lookback,
     lookahead,
+    escapeWord,
     createToken,
     charAtOffset,
     advanceWhile,
@@ -146,58 +137,75 @@ function runLexer(st: State): State {
 
             // HASH, HASHSTAR (DOUBLE/TRIPLE)
             // TODO: Newline checks. Also space-after-token check.
-            case "#":
-                if (lookahead(st, 3) == "##*") {
+            // TODO: Also, can't I just scan the whole line in one go,
+            // TODO: and then recursively scan the inner stuff?
+            // TODO: Or in the parser I could just take everything
+            // TODO: in the same row? Feels a bit hacky though.
+            case "#": {
+                // Headings need to be at the start of a new line.
+                if (lookback(st) != "\n") {
+                    return runLexer(handleOther(st));
+                }
+
+                // Headings also need to be followed by a space
+                // character.
+                if (lookahead(st, 4) == "##* ") {
                     const type = TokenType.TRIPLE_HASHSTAR;
                     const lexeme = "###*";
                     const token = createToken(st, type, lexeme);
                     return runLexer(advance(addToken(st, token), 4));
                 }
 
-                if (lookahead(st, 2) == "##") {
+                if (lookahead(st, 3) == "## ") {
                     const type = TokenType.TRIPLE_HASH;
                     const lexeme = "###";
                     const token = createToken(st, type, lexeme);
                     return runLexer(advance(addToken(st, token), 3));
                 }
 
-                if (lookahead(st, 2) == "#*") {
+                if (lookahead(st, 3) == "#* ") {
                     const type = TokenType.DOUBLE_HASHSTAR;
                     const lexeme = "##*";
                     const token = createToken(st, type, lexeme);
                     return runLexer(advance(addToken(st, token), 3));
                 }
 
-                if (lookahead(st) == "#") {
+                if (lookahead(st, 2) == "# ") {
                     const type = TokenType.DOUBLE_HASH;
                     const lexeme = "##";
                     const token = createToken(st, type, lexeme);
                     return runLexer(advance(addToken(st, token), 2));
                 }
 
-                if (lookahead(st) == "*") {
+                if (lookahead(st, 2) == "* ") {
                     const type = TokenType.HASHSTAR;
                     const lexeme = "#*";
                     const token = createToken(st, type, lexeme);
                     return runLexer(advance(addToken(st, token), 2));
                 }
 
-                // Again, extra braces to create scope.
-                {
+                if (lookahead(st) == " ") {
+                    // Again, extra braces to create scope.
                     const type = TokenType.HASH;
                     const lexeme = "#";
                     const token = createToken(st, type, lexeme);
                     return runLexer(advance(addToken(st, token)));
                 }
 
+                // Not a heading.
+                return runLexer(handleOther(st));
+            }
+
             // HYPHEN
             // TODO: Do a lookback here for \n to make sure
             // TODO: it's for a list. Same for N_DOT.
             case "-": {
-                const type = TokenType.HYPHEN;
-                const lexeme = "-";
-                const token = createToken(st, type, lexeme);
-                return runLexer(advance(addToken(st, token)));
+                if (lookback(st) == "\n" && lookahead(st) == " ") {
+                    const type = TokenType.UL_ITEM;
+                    const lexeme = "-";
+                    const token = createToken(st, type, lexeme);
+                    return runLexer(advance(addToken(st, token)));
+                }
             }
 
 /*
