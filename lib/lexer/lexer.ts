@@ -27,6 +27,7 @@ import {
     charAtOffset,
     advanceWhile,
     hasSourceLeft,
+    advanceWhileEscaping,
     substringBetweenStates
 } from "./helpers.ts";
 
@@ -405,25 +406,11 @@ function handleHeredoc(st: State): State {
 // Eats up everything until whitespace or one of the following:
 // *, **, ~~, __.
 function handleWord(st: State): State {
-    // Chars like *, **, __, ~~ shouldn't be included in
-    // the WORD, and should signal the end of the WORD.
-    const newSt = advanceWhile(st, (curSt) => {
-        // WORD ends when next char is whitespace.
-        const A = /\s/.test(lookahead(curSt));
-        // WORD ends when next char is * (italic) or
-        // % (comment) and isn't escaped (i.e follows a \)
-        const B = /[*%]/.test(lookahead(curSt)) && curChar(curSt) != "\\";
-        // WORD ends when next 2 chars are ~~ (strikethrough) or
-        // __ (underline) and aren't escaped (i.e follow a \)
-        const C = lookahead(curSt, 2) == "~~" && curChar(curSt) != "\\";
-        const D = lookahead(curSt, 2) == "__" && curChar(curSt) != "\\";
-
-        if (A || B || C || D) return false;
-        else return true;
-    });
-
-    // Escape the word.
+    // Advance while also accounting for escapes.
+    const newSt = advanceWhileEscaping(st);
+    // Get the raw string with escapes still there.
     const raw = substringBetweenStates(st, newSt);
+    // Replace escape sequences with correct chars.
     const escaped = escapeWord(raw);
 
     const type = TokenType.WORD;
