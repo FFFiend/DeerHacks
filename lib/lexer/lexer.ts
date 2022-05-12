@@ -72,7 +72,7 @@ function runLexer(st: State): State {
                     const token = createToken(st, type, lexeme);
                     return runLexer(advance(addToken(st, token), 2));
                 } else {
-                    return runLexer(handleOther(st, c));
+                    return runLexer(handleOther(st));
                 }
 
             // DOUBLE_TILDE ~~
@@ -83,7 +83,7 @@ function runLexer(st: State): State {
                     const token = createToken(st, type, lexeme);
                     return runLexer(advance(addToken(st, token), 2));
                 } else {
-                    return runLexer(handleOther(st, c));
+                    return runLexer(handleOther(st));
                 }
 
             // LEFT_BRACKET [
@@ -102,7 +102,7 @@ function runLexer(st: State): State {
                     const token = createToken(st, type, lexeme);
                     return runLexer(advance(addToken(st, token), 2));
                 } else {
-                    return runLexer(handleOther(st, c));
+                    return runLexer(handleOther(st));
                 }
 
             // BRACKET_PAREN ])
@@ -113,7 +113,7 @@ function runLexer(st: State): State {
                     const token = createToken(st, type, lexeme);
                     return runLexer(advance(addToken(st, token), 2));
                 } else {
-                    return runLexer(handleOther(st, c));
+                    return runLexer(handleOther(st));
                 }
 
             // RIGHT_PAREN
@@ -270,7 +270,7 @@ function runLexer(st: State): State {
                 } else {
                     // If it's just a lone @ we go to the default
                     // case which will treat it like a WORD (hopefully?)
-                    return runLexer(handleOther(st, c));
+                    return runLexer(handleOther(st));
                 }
             }
 
@@ -297,7 +297,7 @@ function runLexer(st: State): State {
 
             // DEFAULT CASE
             default:
-                return runLexer(handleOther(st, c));
+                return runLexer(handleOther(st));
         }
     }
 
@@ -308,94 +308,26 @@ function runLexer(st: State): State {
 
 // The default case for the switch statement, when
 // a character doesn't match any special context.
-function handleOther(st: State, c: string): State {
-    // N_DOT
-    // TODO: Actually, just properly check if the N_DOT
-    // follows a newline and is followed by a space,
-    // in which case scan the whole line. Much simpler
-    // and less work for parser/generator.
-    /*
-    if (/\d/.test(c)) {
-        let i = 1;
-        const shouldContinue = (i: number) => {
-            if (st.source.length <= st.position + i) {
-                return /\d/.test(st.source[st.position + i]);
-            } else {
-                return false;
-            }
-        }
+function handleOther(st: State): State {
+    const c = curChar(st);
 
-        // Loop till non-digit char.
-        while (shouldContinue(i)) i++;
+    // OL_ITEM
+    if (/\d/.test(c) && lookback(st) == "\n") {
+        return handleOrderedList(st);
     }
-    */
 
-    // KW_MACRO
-    // TODO: this will actually still match stuff like
-    // TODO: macroabcdef. I need to make sure "acro" is
-    // TODO: followed by a whitespace character.
-    // TODO: Should I just eat up the whole line here?
-    if (c == "m" && lookahead(st, 4) == "acro") {
-        const type = TokenType.KW_MACRO;
-        const lexeme = "macro";
-        const token = createToken(st, type, lexeme);
-        return advance(addToken(st, token), 5);
+    // MACRO_DEF
+    if (c == "m" && lookback(st) == "\n" && lookahead(st, 5) == "acro ") {
+        return handleMacroDef(st);
     }
 
     // HEREDOC
-    // TODO: Should make sure it starts on a new line.
-    if (c == "T" && lookahead(st, 6) == "EX <<<") {
-        /*
-        let i = 7;
-        const shouldContinue = (i: number) => {
-            if (st.source.length <= st.position + i) {
-                return st.source[st.position + i] != "\n";
-            } else {
-                return false;
-            }
-        };
-
-        while(shouldContinue(i)) i++;
-        */
-
-        // Index of the next newline char.
-        // TODO: Check for .search failures as well.
-        // TODO: Return custom errors.
-        // TODO: Probably needs more comments.
-        const endlIndex = st.source.slice(st.position).search(/\n/);
-        // Endmarker for the heredoc block.
-        const endMarker = st.source.slice(st.position + 8, endlIndex);
-        // Find index of the closing endmarker. Note
-        // this index is the offset from the newline
-        // of the heredoc opening.
-        const substr = st.source.slice(endlIndex);
-        const endMarkerIndex = substr.search(endMarker);
-
-        const totalOffset = 7 + endMarker.length + endMarkerIndex;
-
-        const type = TokenType.HEREDOC_BLOCK;
-        const lexeme = lookahead(st, totalOffset);
-        const token = createToken(st, type, lexeme);
-        return advance(addToken(st, token), totalOffset);
+    if (c == "T" && lookback(st) == "\n" && lookahead(st, 7) == "EX <<< ") {
+        return handleHeredoc(st);
     }
 
-    // WORD - eats up almost everything else that isn't whitespace.
     if (/\S/.test(c)) {
-        // Chars like *, **, __, ~~ shouldn't be included in
-        // the WORD, and should signal the end of the WORD.
-        const newSt = advanceWhile(st, (curSt) => {
-            if (/\s/.test(lookahead(curSt)) || /[*%]/.test(lookahead(curSt)))
-                return false;
-            if (lookahead(curSt, 2) == "~~" || lookahead(curSt, 2) == "__")
-                return false;
-
-            return true;
-        });
-
-        const type = TokenType.WORD;
-        const lexeme = substringBetweenStates(st, newSt);
-        const token = createToken(st, type, lexeme);
-        return advance(addToken(newSt, token));
+        return handleWord(st);
     }
 
     // Ignore extra whitespace.
@@ -407,6 +339,89 @@ function handleOther(st: State, c: string): State {
     // TODO: Throw error on unrecognized chars instead of
     // TODO: just ignoring them as we do right now.
     return advance(st);
+}
+
+// OL_ITEM
+function handleOrderedList(st: State): State {
+    // Eat up all the digits.
+    const newSt = advanceWhile(st, (curSt: State) => {
+        return /\d/.test(curChar(curSt));
+    });
+
+    // The numbers need to be followed by a dot and space.
+    if (curChar(newSt) == "." && lookahead(newSt) == " ") {
+        const type = TokenType.OL_ITEM;
+        const lexeme = substringBetweenStates(st, newSt);
+        const token = createToken(st, type, lexeme);
+        return advance(addToken(newSt, token));
+    } else {
+        // Otherwise, just treat it as a word.
+        return handleWord(st);
+    }
+}
+
+// TODO: Need to lex this properly...
+// TODO: Scan the whole line, actually.
+function handleMacroDef(st: State): State {
+    const type = TokenType.MACRO_DEF;
+    const lexeme = "macro";
+    const token = createToken(st, type, lexeme);
+    return advance(addToken(st, token), 5);
+}
+
+// Eats up the TEX <<< <MARKER> line and all lines until the ending
+// <MARKER> line.
+// TODO: Testing.
+function handleHeredoc(st: State): State {
+    // Index of the next newline char.
+    // TODO: Check for .search failures as well.
+    // TODO: Return custom errors.
+    // TODO: Probably needs more comments.
+    const endlIndex = st.source.slice(st.position).search(/\n/);
+    // Endmarker for the heredoc block.
+    const endMarker = st.source.slice(st.position + 8, endlIndex);
+    // Find index of the closing endmarker. Note
+    // this index is the offset from the newline
+    // of the heredoc opening.
+    const substr = st.source.slice(endlIndex);
+    const endMarkerIndex = substr.search(endMarker);
+
+    const totalOffset = 7 + endMarker.length + endMarkerIndex;
+
+    const type = TokenType.HEREDOC_BLOCK;
+    const lexeme = lookahead(st, totalOffset);
+    const token = createToken(st, type, lexeme);
+    return advance(addToken(st, token), totalOffset);
+}
+
+// Eats up everything until whitespace or one of the following:
+// *, **, ~~, __.
+function handleWord(st: State): State {
+    // Chars like *, **, __, ~~ shouldn't be included in
+    // the WORD, and should signal the end of the WORD.
+    const newSt = advanceWhile(st, (curSt) => {
+        // WORD ends when next char is whitespace.
+        const A = /\s/.test(lookahead(curSt));
+        // WORD ends when next char is * (italic) or
+        // % (comment) and isn't escaped (i.e follows a \)
+        const B = /[*%]/.test(lookahead(curSt)) && curChar(curSt) != "\\";
+        // WORD ends when next 2 chars are ~~ (strikethrough) or
+        // __ (underline) and aren't escaped (i.e follow a \)
+        const C = lookahead(curSt, 2) == "~~" && curChar(curSt) != "\\";
+        const D = lookahead(curSt, 2) == "__" && curChar(curSt) != "\\";
+
+        if (A || B || C || D) return false;
+        else return true;
+    });
+
+    // Escape the word.
+    const raw = substringBetweenStates(st, newSt);
+    const escaped = escapeWord(raw);
+
+    const type = TokenType.WORD;
+    const lexeme = escaped;
+    const token = createToken(st, type, lexeme);
+    return advance(addToken(newSt, token));
 }
 
 // Starts the lexer and returns the final tokens.
