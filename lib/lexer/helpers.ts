@@ -121,13 +121,13 @@ export function lookahead(state: State, n: number = 1): string {
 
 // Same as lookahead, but in the other direction.
 export function lookback(state: State, n: number = 1): string {
-    const { source, position } = state;
+    const { position } = state;
 
     const lookbackPosition = position - n;
     const bound = 0;
 
     const sliceSize = Math.max(lookbackPosition, bound);
-    return state.source.slice(lookbackPosition, position);
+    return state.source.slice(sliceSize, position);
 }
 
 // Returns the character at the current position in
