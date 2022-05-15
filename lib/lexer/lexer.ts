@@ -111,13 +111,13 @@ function runLexer(st: State): State {
         }
 
         // HASH, HASHSTAR (DOUBLE/TRIPLE)
-        // NOTE: In the parser, the heading will consist
-        // NOTE: of all the tokens on the same row. The lexeme
-        // NOTE: will only contain the heading symbol itself,
-        // NOTE: not the entire line.
         case "#": {
             // Headings need to be at the start of a new line.
-            if (lookback(st) != "\n") {
+            // We also check for an empty lookback since
+            // headings could be at the very start of a file
+            // (which means no characters to look back at, which
+            // means empty lookback string).
+            if (lookback(st) != "\n" || lookback(st) != "") {
                 return runLexer(handleOther(st));
             }
 
