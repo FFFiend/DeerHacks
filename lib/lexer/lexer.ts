@@ -1,5 +1,9 @@
 import { Token, TokenType, State } from "./types.ts";
-import { UnrecognizedCharError, UnclosedSequenceError } from "./errors.ts";
+import {
+    UnrecognizedCharError,
+    UnclosedSequenceError,
+    UnexpectedCharError
+} from "./errors.ts";
 
 import {
     advance,
@@ -17,6 +21,28 @@ import {
     advanceWhileEscaping,
     substringBetweenStates
 } from "./helpers.ts";
+
+// TODO: Change lexer so that lexemes also include the whitespace
+// TODO: that follows them (excluding newlines). For example, for
+// TODO: "word1 word2", the first lexeme should be "word1 " (with
+// TODO: the space at the end) and the second should be "word2"
+// TODO: (no space). The idea is that after lexing, if I take all
+// TODO: the tokens and join their lexemes together again, the
+// TODO: resulting string should match with the original source.
+// TODO: Maybe I can include the whitespace in the lexeme but NOT
+// TODO: actually advance the state over that whitespace, since a
+// TODO: lot of stuff like advance depends on this whitespace to
+// TODO: determine position/structure/etc.
+
+// TODO: Make sure all TokenTypes are added. Some like TEX/LATEX
+// TODO: math delimiters are missing.
+
+// TODO: Add SOF/EOF tokens.
+
+// TODO: Errors.
+
+// TODO: Add a new "advanceUntil" helper and use that wherever it
+// TODO: helps readability.
 
 // Recursively scan the source.
 function runLexer(st: State): State {
@@ -315,27 +341,109 @@ function handleMacroDef(st: State): State {
 
 // Eats up the TEX <<< <MARKER> line and all lines until the ending
 // <MARKER> line.
-// TODO: Testing.
+// TODO: Testing. Apparently goes into an infinite loop somewhere.
 function handleHeredoc(st: State): State {
-    // Index of the next newline char.
-    // TODO: Check for .search failures as well.
-    // TODO: Return custom errors.
-    // TODO: Probably needs more comments.
-    const endlIndex = st.source.slice(st.position).search(/\n/);
-    // Endmarker for the heredoc block.
-    const endMarker = st.source.slice(st.position + 8, endlIndex);
-    // Find index of the closing endmarker. Note
-    // this index is the offset from the newline
-    // of the heredoc opening.
-    const substr = st.source.slice(endlIndex);
-    const endMarkerIndex = substr.search(endMarker);
+    // Advance until we reach a newline.
+    const newSt = advanceWhile(st, (curSt) => {
+        return curChar(curSt) != "\n";
+    });
 
-    const totalOffset = 7 + endMarker.length + endMarkerIndex;
+    // Get the line string and use regex to get the
+    // delimiting identifier.
+    const line = substringBetweenStates(st, newSt);
+    const match = line.match(/^TEX <<< (.*)\n$/);
+
+    // If the match fails, we attach an error to original
+    // st and continue parsing stuff as a WORD.
+    if (match === null) {
+        const expected = "delimiting identifier";
+        const hint = ([
+            "A delimiting identifier is needed to mark the",
+            "beginning and end of the raw tex code in the",
+            "heredoc block. For example, the identifiers 'EOF'",
+            "and 'END' are common, like so:",
+            "    TEX <<< END",
+            "    % Here goes your TeX code.",
+            "    END",
+            ""
+        ]).join("\n")
+        // We use newSt to CREATE the error because the error class
+        // takes newSt's cur position (a newline in this case) when
+        // showing "Expected ..., got: '\n'". The original st on the
+        // other hand is sitting at T(EX) so we can't use that.
+        const err = new UnexpectedCharError(newSt, expected, hint);
+        // Then we attach the error to the original st and let it
+        // continue from the T(EX) position, parsing everything as a
+        // word. I guess this isn't a fatal error, then?
+        return handleWord(attachError(st, err));
+    }
+
+    // Get the captured identifier.
+    const marker = match[1];
+    // We keep advancing until we see the identifier appear
+    // on a new line.
+    const newSt2 = advanceWhile(newSt, (curSt) => {
+        // Get lookahead for marker length + 1 to make sure
+        // its on its own line and nothing else is there.
+        const str = lookahead(curSt, marker.length + 1);
+        return !(
+            // First make sure the current character is a new
+            // line, so we know the marker afterwards is at the
+            // start of a new line.
+            curChar(curSt) == "\n" &&
+            // Now check that the lookahead equals marker + newline,
+            // which means nothing else appears after it on the line.
+            // However, if the marker appears the end of a file, it
+            // could be on its own line but still not have the \n
+            // char at the end since its the last line of the file.
+            // In this case, the lookahead would just return a string
+            // of the same length as the marker (so it would ignore
+            // the + 1 we did), which means we just need to do a simple
+            // str == marker check to cover that case.
+            ((str == marker + "\n") || (str == marker))
+        );
+    });
+
+    // Check that we really did see the marker in the lookahead
+    // instead of advanceWhile finishing because of running out
+    // of source, in which case it's an error.
+    if (!hasSourceLeft(newSt2)) {
+        // Same logic as above, but with newSt2.
+        const expected = "delimiting identifier";
+        const hint = ([
+            "A delimiting identifier is needed to mark the",
+            "beginning and end of the raw tex code in the",
+            "heredoc block. For example, the identifiers 'EOF'",
+            "and 'END' are common, like so:",
+            "    TEX <<< END",
+            "    % Here goes your TeX code.",
+            "    END",
+            ""
+        ]).join("\n")
+        const err = new UnexpectedCharError(newSt2, expected, hint);
+        return handleWord(attachError(st, err));
+    }
+
+    // At this point we know we matched a proper heredoc block.
+    // We advance newSt2 to cover the closing delimiting marker
+    // (since its currently at the end of the previous line).
+    // We also advance newSt2 once first since it's already
+    // sitting on a \n char, if you go check above.
+    const newSt3 = advanceWhile(advance(newSt2), (curSt) => {
+        return curChar(curSt) != "\n";
+    })
+
+    // newSt is at the end of the opening heredoc delimiter
+    // line, and newSt2 was at the end of line before the
+    // closing delimiter line, so the substring between them
+    // contains all the raw tex code (including some extra
+    // \n's around it which we slice off).
+    const innerStr = substringBetweenStates(newSt, newSt2).slice(1,-1);
 
     const type = TokenType.HEREDOC_BLOCK;
-    const lexeme = lookahead(st, totalOffset);
+    const lexeme = innerStr;
     const token = createToken(st, type, lexeme);
-    return advance(addToken(st, token), totalOffset);
+    return addToken(newSt3, token);
 }
 
 // Eats up everything until whitespace or one of the following:
@@ -351,6 +459,7 @@ function handleWord(st: State): State {
     const type = TokenType.WORD;
     const lexeme = escaped;
     const token = createToken(st, type, lexeme);
+    // TODO: Am I supposed to advance here?
     return advance(addToken(newSt, token));
 }
 
