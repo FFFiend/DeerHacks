@@ -1,7 +1,8 @@
-import { AST, LeafType, BranchType, Node } from "../parser/ast.ts";
+import { AST, LeafType, BranchType, Node } from "../parser/types.ts";
+
+// TODO: Lots of wet code, DRY it up!
 
 // Renders a leaf node.
-// TODO: All the other LeafTypes...
 function renderLeaf(node: Node): string {
     switch (node.type) {
         case LeafType.WORD: {
@@ -11,7 +12,33 @@ function renderLeaf(node: Node): string {
             // TypeScript thinks data might be null so we have
             // to handle it with || "". AGAIN: FIND A BETTER
             // REPRESENTATION!
-            return node.data || "";
+            return typeof(node.data) == "string" ? node.data : "";
+        }
+
+        case LeafType.AT_DELIM: {
+            // Wrap around inline math delim \(...\)
+            return `\\(${node.data}\\)` || "";
+        }
+
+        case LeafType.RAW_TEX: {
+            // TODO: Should I wrap newlines around this...?
+            return `\n${node.data}\n` || "";
+        }
+
+        case LeafType.TEX_INLINE_MATH: {
+            return `$${node.data}$` || "";
+        }
+
+        case LeafType.TEX_DISPLAY_MATH: {
+            return `$$${node.data}$$` || "";
+        }
+
+        case LeafType.LATEX_INLINE_MATH: {
+            return `\\(${node.data}\\)` || "";
+        }
+
+        case LeafType.LATEX_DISPLAY_MATH: {
+            return `\\[${node.data}\\]` || "";
         }
 
         // TODO: Proper Error handling!!!
@@ -27,7 +54,7 @@ function renderLeaf(node: Node): string {
 // TODO: All the other BranchTypes...
 function renderBranch(node: Node): string {
     switch (node.type) {
-        case BranchType.BOLD: {
+        case BranchType.ITALIC: {
             // AGAIN: TypeScript doesn't know children ISN'T null so
             // we have to handle that case to keep TS happy.
             const pieces
@@ -39,7 +66,148 @@ function renderBranch(node: Node): string {
             // TODO: Need more testing here to make sure
             // TODO: everything renders properly after joining
             // TODO: with " ".
+            return "\\textit{" + pieces.join(" ") + "}";
+        }
+
+        case BranchType.BOLD: {
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
             return "\\textbf{" + pieces.join(" ") + "}";
+        }
+
+        case BranchType.UNDERLINE: {
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
+            return "\\underline{" + pieces.join(" ") + "}";
+        }
+
+        case BranchType.STRIKETHROUGH: {
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
+            // TODO: What's the ulem command for strikethrough?
+            return "\\underline{" + pieces.join(" ") + "}";
+        }
+
+        case BranchType.SECTION: {
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
+            return "\\section{" + pieces.join(" ") + "}\n";
+        }
+
+        case BranchType.SUBSECTION: {
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
+            return "\\subsection{" + pieces.join(" ") + "}\n";
+        }
+
+        case BranchType.SUBSUBSECTION: {
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
+            return "\\subsubsection{" + pieces.join(" ") + "}\n";
+        }
+
+        case BranchType.SECTION_STAR: {
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
+            return "\\section*{" + pieces.join(" ") + "}\n";
+        }
+
+        case BranchType.SUBSECTION_STAR: {
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
+            return "\\subsection*{" + pieces.join(" ") + "}\n";
+        }
+
+        case BranchType.SUBSUBSECTION_STAR: {
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
+            return "\\subsubsection*{" + pieces.join(" ") + "}\n";
+        }
+
+        case BranchType.LINK: {
+            const ref = node.data || "";
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
+            return "\\href{" + ref + "}{" + pieces.join(" ") + "}"
+        }
+
+        case BranchType.IMAGE: {
+            const ref = node.data || "";
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
+            const strlist = [
+                "\\begin{figure}[htp]",
+                "    \\centering",
+                "    \\includegraphics{" + ref + "}",
+                "    \\caption{" + pieces.join(" ") + "}",
+                "    \\label{fig:" + ref + "}",
+                "\\end{figure}"
+            ];
+
+            return strlist.join("\n");
+        }
+
+        // TODO: No idea if the whitespace between them is consistent
+        // TODO: or not, needs testing.
+        case BranchType.ITEMIZE: {
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
+            const items = pieces.map((p: string) => "\item " + p);
+            const strlist = ["\\begin{itemize}", ...items, "\\end{itemize}"];
+
+            return strlist.join("\n");
+        }
+
+        case BranchType.ENUMERATE: {
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
+            const items = pieces.map((p: string) => "\item " + p);
+            const strlist = [
+                "\\begin{enumerate}",
+                ...items,
+                "\\end{enumerate}"
+            ];
+
+            return strlist.join("\n");
         }
 
         default: {
