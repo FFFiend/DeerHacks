@@ -1,10 +1,18 @@
 import { Token } from "../lexer/types.ts";
 
+// Macro definitions.
+export type MacroDefData = {
+    name: string,
+    params: string[],
+    body: string
+}
+
 // Keep track of parser state.
 export type State = {
     tokens: Token[],
     position: number,
-    tree: AST
+    tree: AST,
+    macroDefs: MacroDefData[]
 }
 
 // These nodes never have any children. Their data
@@ -12,38 +20,36 @@ export type State = {
 // the LaTeX files as-is.
 export enum LeafType {
     WORD,
-    RAW_TEX,
     AT_DELIM,
     MACRO_DEF,
-    TEX_INLINE,
-    TEX_DISPLAY,
-    LATEX_INLINE,
-    LATEX_DISPLAY,
+    RAW_TEX,
+    TEX_INLINE_MATH,
+    TEX_DISPLAY_MATH,
+    LATEX_INLINE_MATH,
+    LATEX_DISPLAY_MATH,
 }
 
 // These nodes always have children. They may or may
 // not contain extra data about the node.
 export enum BranchType {
-    // Paragraph
-    PARAGRAPH,
+    // Emphasis
+    ITALIC, BOLD, UNDERLINE, STRIKETHROUGH,
+
     // SECTIONS
     SECTION, SUBSECTION, SUBSUBSECTION,
     SECTION_STAR, SUBSECTION_STAR, SUBSUBSECTION_STAR,
-    // Emphasis
-    BOLD, ITALIC, UNDERLINE, STRIKETHROUGH,
+
     // Links/Images
-    LINK_REF, IMAGE,
+    LINK, IMAGE,
+
     // Lists
-    ITEMIZE, ENUMERATE, //LIST_ITEM
+    ITEMIZE, ENUMERATE,
+
+    // Paragraph
+    PARAGRAPH
 }
 
-export type MacroDefData = {
-    name: string,
-    params: string[],
-    body: string
-}
-
-export type NodeData = MacroDefData | string | null;
+export type NodeData = string | null;
 
 // Each node is either a leaf node or a branch node.
 export type NodeType = LeafType | BranchType;

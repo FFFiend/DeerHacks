@@ -1,19 +1,36 @@
-import { State, LeafType, BranchType, Node } from "./types.ts";
 import { Token } from "../lexer/types.ts";
 import { constrainLexeme } from "../lexer/helpers.ts";
+import {
+    Node,
+    State,
+    NodeData,
+    LeafType,
+    BranchType,
+    MacroDefData
+} from "./types.ts";
 
 // Returns a new parser state object given list of tokens.
 export function newState(tokens: Token[]): State {
     return {
         tokens: tokens,
         position: 0,
-        tree: []
+        tree: [],
+        macroDefs: []
+    };
+}
+
+export function attachMacroData(oldState: State, data: MacroDefData): State {
+    return {
+        tokens: [...oldState.tokens],
+        position: oldState.position,
+        tree: [...oldState.tree],
+        macroDefs: [...oldState.macroDefs, data]
     };
 }
 
 // Returns a leaf node object given current state, node type
 // and node data.
-export function createLeaf(state: State, type: LeafType, data: string): Node {
+export function createLeaf(state: State, type: LeafType, data: NodeData): Node {
     return {
         col: curToken(state).col,
         row: curToken(state).row,
@@ -25,7 +42,7 @@ export function createLeaf(state: State, type: LeafType, data: string): Node {
 
 // Returns a branch node object given state, type, data (possibly null)
 // and children.
-export function createBranch(state: State, type: BranchType, data: string | null, children: Node[]): Node {
+export function createBranch(state: State, type: BranchType, data: NodeData, children: Node[]): Node {
     return {
         col: curToken(state).col,
         row: curToken(state).row,
@@ -42,7 +59,8 @@ export function addNode(oldState: State, node: Node): State {
     return {
         tokens: [...oldState.tokens],
         position: oldState.position,
-        tree: [...oldState.tree, node]
+        tree: [...oldState.tree, node],
+        macroDefs: [...oldState.macroDefs]
     };
 }
 
@@ -52,7 +70,8 @@ export function advanceOnce(oldState: State): State {
         return {
             tokens: [...oldState.tokens],
             position: oldState.position + 1,
-            tree: [...oldState.tree]
+            tree: [...oldState.tree],
+            macroDefs: [...oldState.macroDefs]
         };
     } else {
         return oldState;
