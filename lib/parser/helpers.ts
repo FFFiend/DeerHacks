@@ -112,9 +112,7 @@ export function hasTokensLeft(st: State): boolean {
 // So we can index the enum to determine Branch/Leaf type...
 type EnumObj = {[index: string | number]: string | number};
 
-// Node to String.
-// TODO: What a mess!
-export function nodeToStr(node: Node, indent = 2, i = 0): string {
+export function printNode(node: Node, indent = 2, i = 0): void {
     // The node is a branch node if it has the `children` field.
     const nodeType: EnumObj
         = Object.keys(node).includes("children")
@@ -124,20 +122,36 @@ export function nodeToStr(node: Node, indent = 2, i = 0): string {
     // Outer pad for the braces lines.
     let outerPad = " ".repeat(indent * i);
     let innerPad = " ".repeat(indent * (i+1));
-    let str = "";
 
-    // We need to do an assertion to shut TypeScript up.
-    str = str + outerPad + `${nodeType[node.type as number]} {` + "\n";
+    // Node type
+    console.log(
+        // We need to do an assertion to shut TypeScript up.
+        outerPad + `%c${nodeType[node.type as number]}%c {`,
+        "color: red", "color: default"
+    );
 
-    str = str + innerPad + `Col: ${node.col},` + "\n";
-    str = str + innerPad + `Row: ${node.row},` + "\n";
-    str = str + innerPad + `Data: ${constrainLexeme(JSON.stringify(node.data))},` + "\n";
-    str = str + innerPad + `Children: [\n`;
-    str = str + (
-        node.children ? node.children.map(n => nodeToStr(n, indent, i+2)).join("\n") : (" ".repeat(indent * (i+2)) + "NONE")
-    ) + "\n";
-    str = str + innerPad + "]\n"
-    str = str + outerPad + "}"
+    // Column/row
+    console.log(
+        innerPad + `C:R = %c${node.col}:${node.row}%c,`,
+        "color: blue", "color: default"
+    );
 
-    return str;
+    // If it has data
+    if (node.data) {
+        const data = constrainLexeme(JSON.stringify(node.data));
+        console.log(
+            innerPad + `Data = %c${data}%c,`,
+            "color: green", "color: default"
+        );
+    }
+
+    // Recursively print child nodes with increased indentation.
+    if (node.children) {
+        console.log(innerPad + `Children = [`);
+        node.children.map(n => printNode(n, indent, i+2));
+        console.log(innerPad + "]");
+    }
+
+    // Final brace
+    console.log(outerPad + "}");
 }
