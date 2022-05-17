@@ -3,9 +3,7 @@ import { Token, TokenType } from "../lexer/types.ts";
 
 import {
     AST,
-    Node,
-    State,
-    NodeType,
+    ParserState as State,
     LeafType,
     BranchType,
     MacroDefData

@@ -2,7 +2,7 @@ import { Token } from "../lexer/types.ts";
 import { constrainLexeme } from "../lexer/helpers.ts";
 import {
     Node,
-    State,
+    ParserState as State,
     NodeData,
     LeafType,
     BranchType,

@@ -8,7 +8,7 @@ export type MacroDefData = {
 }
 
 // Keep track of parser state.
-export type State = {
+export type ParserState = {
     tokens: Token[],
     position: number,
     tree: AST,
