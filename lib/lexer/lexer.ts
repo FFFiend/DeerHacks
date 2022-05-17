@@ -315,7 +315,7 @@ function handleOther(st: State): State {
 // OL_ITEM
 function handleOrderedList(st: State): State {
     // Eat up all the digits.
-    const newSt = advanceWhile(st, (curSt => {
+    const newSt = advanceWhile(st, (curSt) => {
         return /\d/.test(curChar(curSt));
     });
 
