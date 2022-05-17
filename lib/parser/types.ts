@@ -21,7 +21,6 @@ export type ParserState = {
 export enum LeafType {
     WORD,
     AT_DELIM,
-    MACRO_DEF,
     RAW_TEX,
     TEX_INLINE_MATH,
     TEX_DISPLAY_MATH,

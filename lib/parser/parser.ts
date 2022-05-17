@@ -76,7 +76,6 @@ function runParser(st: State): State {
         // on the State to store macro definitions, and then over
         // here I add the macro def data to that field.
         case TokenType.MACRO_DEF: {
-            const type = LeafType.MACRO_DEF;
             const data = extractMacroDefData(t);
             return runParser(advance(attachMacroData(st, data)));
         }
