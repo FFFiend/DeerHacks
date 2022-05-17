@@ -1,12 +1,15 @@
 import {
     Token,
-    State,
+    LexerState as State,
     TokenType,
     LexerError,
 } from "./types.ts"
 
 
-// Initializes a new State object from the given source.
+/**
+ * Initializes a new LexerState object from the given source
+ * @param {string} src - The markup source to lex.
+ */
 export function newState(src: string): State {
     return {
         source: src,

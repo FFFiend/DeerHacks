@@ -27,10 +27,6 @@ export enum TokenType {
     HASHSTAR, DOUBLE_HASHSTAR, TRIPLE_HASHSTAR,
 
     // '[', '![', '](', ')'
-    // TODO: Hmm, should I lex the whole thing instead
-    // TODO: of just [ and ]( and separate tokens here?
-    // TODO: Is it REALLY a big deal if my parser calls
-    // TODO: the lexer inside it???
     LEFT_BRACKET, BANG_BRACKET,
     BRACKET_PAREN, RIGHT_PAREN,
 
@@ -61,7 +57,7 @@ export type LexerError
     | UnexpectedCharError;
 
 // Keep track of scanner state.
-export type State = {
+export type LexerState = {
     source: string,
     tokens: Token[],
     position: number,

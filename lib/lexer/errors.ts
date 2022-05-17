@@ -1,4 +1,4 @@
-import { State } from "./types.ts";
+import { LexerState as State } from "./types.ts";
 
 export class UnrecognizedCharError extends Error {
     private readonly state: State;

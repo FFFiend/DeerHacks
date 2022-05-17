@@ -1,7 +1,6 @@
-import { Token, TokenType, State } from "./types.ts";
+import { Token, TokenType, LexerState as State, LexerError } from "./types.ts";
 import {
     UnrecognizedCharError,
-    UnclosedSequenceError,
     UnexpectedCharError
 } from "./errors.ts";
 
@@ -15,7 +14,6 @@ import {
     escapeWord,
     attachError,
     createToken,
-    charAtOffset,
     advanceWhile,
     hasSourceLeft,
     advanceWhileEscaping,
@@ -317,7 +315,7 @@ function handleOther(st: State): State {
 // OL_ITEM
 function handleOrderedList(st: State): State {
     // Eat up all the digits.
-    const newSt = advanceWhile(st, (curSt: State) => {
+    const newSt = advanceWhile(st, (curSt => {
         return /\d/.test(curChar(curSt));
     });
 
@@ -488,12 +486,12 @@ export function lex(src: string): Token[] {
     // TODO: be the terminal or could be on the web).
     // Print errors if any.
     if (finalState.errors.length > 0) {
-        finalState.errors.forEach(e => e.print());
+        finalState.errors.forEach((e: LexerError) => e.print());
     }
 
     // Check if any errors were fatal. If so,
     // we don't return any tokens.
-    if (finalState.errors.some(e => e.fatal)) {
+    if (finalState.errors.some((e: LexerError) => e.fatal)) {
         return [];
     }
 
