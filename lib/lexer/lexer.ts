@@ -47,8 +47,11 @@ import {
 // Recursively scan the source.
 function runLexer(st: State): State {
     // Base case, no more source left to scan.
-    // We just return the state we have.
-    if (!hasSourceLeft(st)) return st;
+    // We just insert the EOF token and then
+    // return the state we have.
+    if (!hasSourceLeft(st)) {
+        return st;
+    }
 
     const c = curChar(st);
 
@@ -466,8 +469,23 @@ function handleWord(st: State): State {
 // Starts the lexer and returns the final tokens.
 export function lex(src: string): Token[] {
     const st = newState(src);
-    const finalState = runLexer(st);
 
+    // We insert the SOF token first before running the lexer.
+    const sofType = TokenType.SOF;
+    const sofLexeme = "";
+    const sofToken = createToken(st, sofType, sofLexeme);
+    const newSt = runLexer(addToken(st, sofToken));
+
+    // We insert the EOF token at the end after lexing.
+    const eofType = TokenType.EOF;
+    const eofLexeme = "";
+    const eofToken = createToken(newSt, eofType, eofLexeme);
+    const finalState = addToken(newSt, eofToken);
+
+    // TODO: We shouldn't be printing or doing any IO
+    // TODO: inside lex, since we don't know where
+    // TODO: this is function is being used (i.e could
+    // TODO: be the terminal or could be on the web).
     // Print errors if any.
     if (finalState.errors.length > 0) {
         finalState.errors.forEach(e => e.print());
@@ -479,5 +497,7 @@ export function lex(src: string): Token[] {
         return [];
     }
 
+    // TODO: Should I just return the final state itself
+    // TODO: instead of just the tokens?
     return finalState.tokens;
 }
