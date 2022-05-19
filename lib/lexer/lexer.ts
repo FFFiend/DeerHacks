@@ -144,7 +144,7 @@ function runLexer(st: State): State {
             // headings could be at the very start of a file
             // (which means no characters to look back at, which
             // means empty lookback string).
-            if (lookback(st) != "\n" || lookback(st) != "") {
+            if (lookback(st) != "\n" && lookback(st) != "") {
                 return runLexer(handleOther(st));
             }
 
