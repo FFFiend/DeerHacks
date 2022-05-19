@@ -83,9 +83,7 @@ function runParser(st: State): State {
         // RAW_TEX
         case TokenType.HEREDOC_BLOCK: {
             const type = LeafType.RAW_TEX;
-            // Exclude the first and last lines that are part of
-            // the heredoc syntax and not the TeX code.
-            const data = t.lexeme.split("\n").slice(1,-1).join("\n");
+            const data = t.lexeme;
             const node = createLeaf(st, type, data);
             return runParser(advance(addNode(st, node)));
         }
