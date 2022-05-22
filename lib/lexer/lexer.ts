@@ -242,7 +242,7 @@ function runLexer(st: State): State {
         case "@": {
             const newSt = advanceWhile(st, (curSt) => {
                 const samePosition = curSt.position == st.position;
-                const nonWhitespace = /\S/.test(curChar(curSt));
+                const nonWhitespace = /\S/.test(lookahead(curSt));
 
                 return samePosition || nonWhitespace;
             });
