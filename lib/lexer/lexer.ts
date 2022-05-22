@@ -157,7 +157,7 @@ function runLexer(st: State): State {
             // headings could be at the very start of a file
             // (which means no characters to look back at, which
             // means empty lookback string).
-            if (lookback(st) != "\n" && lookback(st) != "") {
+            if (!isAtStartOfLine(st)) {
                 return runLexer(handleOther(st));
             }
 
@@ -219,10 +219,11 @@ function runLexer(st: State): State {
         case "-": {
             // Needs to be at the start of the line and with a
             // space following it.
-            if (lookback(st) == "\n" && lookahead(st) == " ") {
+            if (isAtStartOfLine(st) && lookahead(st) == " ") {
                 const type = TokenType.UL_ITEM;
                 const lexeme = "-";
-                const token = createToken(st, type, lexeme);
+                const rightPad = captureRightPad(st);
+                const token = createToken(st, type, lexeme, rightPad);
                 return runLexer(advance(addToken(st, token)));
             } else {
                 return runLexer(handleOther(st));
@@ -296,23 +297,38 @@ function runLexer(st: State): State {
     }
 }
 
+// TODO: Move to helpers
+// TODO: ---------------
+// Checks whether the state is currently at the
+// start of a line. That is, if it's at the very
+// first character of a file, OR the previous
+// character is a newline.
+// TODO: Actually, can't I just do a simple
+// TODO: st.col == 1 check here? Much simpler,
+// TODO: and makes use of the state's structure
+// TODO: as well.
+// TODO: ------------------------------------
+function isAtStartOfLine(st: State): boolean {
+    return lookback(st) == "\n" || lookback(st) == "";
+}
+
 // The default case for the switch statement, when
 // a character doesn't match any special context.
 function handleOther(st: State): State {
     const c = curChar(st);
 
     // OL_ITEM
-    if (/\d/.test(c) && lookback(st) == "\n") {
+    if (/\d/.test(c) && isAtStartOfLine(st)) {
         return handleOrderedList(st);
     }
 
     // MACRO_DEF
-    if (c == "m" && lookback(st) == "\n" && lookahead(st, 5) == "acro ") {
+    if (c == "m" && lookahead(st, 5) == "acro " && isAtStartOfLine(st)) {
         return handleMacroDef(st);
     }
 
     // HEREDOC
-    if (c == "T" && lookback(st) == "\n" && lookahead(st, 7) == "EX <<< ") {
+    if (c == "T" && lookahead(st, 7) == "EX <<< " && isAtStartOfLine(st)) {
         return handleHeredoc(st);
     }
 
