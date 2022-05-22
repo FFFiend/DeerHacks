@@ -16,6 +16,7 @@ import {
     createToken,
     advanceWhile,
     hasSourceLeft,
+    captureRightPad,
     advanceWhileEscaping,
     substringBetweenStates
 } from "./helpers.ts";
@@ -59,14 +60,20 @@ function runLexer(st: State): State {
             if (lookahead(st) == "*") {
                 const type = TokenType.DOUBLE_STAR;
                 const lexeme = "**";
-                const token = createToken(st, type, lexeme);
+                // We advance st once because right now it's at
+                // the first *, and we know the next char is
+                // another * so we need to start capturing from
+                // there.
+                const rightPad = captureRightPad(advance(st));
+                const token = createToken(st, type, lexeme, rightPad);
 
                 // Add token, advance twice, continue lexing.
                 return runLexer(advance(addToken(st, token), 2));
             } else {
                 const type = TokenType.STAR;
                 const lexeme = "*";
-                const token = createToken(st, type, lexeme);
+                const rightPad = captureRightPad(st);
+                const token = createToken(st, type, lexeme, rightPad);
 
                 // Advance once since STAR has length one.
                 return runLexer(advance(addToken(st, token)));
@@ -78,7 +85,8 @@ function runLexer(st: State): State {
             if (lookahead(st) == "_") {
                 const type = TokenType.DOUBLE_UNDERSCORE;
                 const lexeme = "__";
-                const token = createToken(st, type, lexeme);
+                const rightPad = captureRightPad(advance(st));
+                const token = createToken(st, type, lexeme, rightPad);
                 return runLexer(advance(addToken(st, token), 2));
             } else {
                 return runLexer(handleOther(st));
@@ -90,7 +98,8 @@ function runLexer(st: State): State {
             if (lookahead(st) == "~") {
                 const type = TokenType.DOUBLE_TILDE;
                 const lexeme = "~~";
-                const token = createToken(st, type, lexeme);
+                const rightPad = captureRightPad(advance(st));
+                const token = createToken(st, type, lexeme, rightPad);
                 return runLexer(advance(addToken(st, token), 2));
             } else {
                 return runLexer(handleOther(st));
@@ -101,7 +110,8 @@ function runLexer(st: State): State {
         case "[": {
             const type = TokenType.LEFT_BRACKET;
             const lexeme = "[";
-            const token = createToken(st, type, lexeme);
+            const rightPad = captureRightPad(st);
+            const token = createToken(st, type, lexeme, rightPad);
             return runLexer(advance(addToken(st, token)));
         }
 
@@ -110,7 +120,8 @@ function runLexer(st: State): State {
             if (lookahead(st) == "[") {
                 const type = TokenType.BANG_BRACKET;
                 const lexeme = "![";
-                const token = createToken(st, type, lexeme);
+                const rightPad = captureRightPad(advance(st));
+                const token = createToken(st, type, lexeme, rightPad);
                 return runLexer(advance(addToken(st, token), 2));
             } else {
                 return runLexer(handleOther(st));
@@ -122,7 +133,8 @@ function runLexer(st: State): State {
             if (lookahead(st) == "(") {
                 const type = TokenType.BRACKET_PAREN;
                 const lexeme = "](";
-                const token = createToken(st, type, lexeme);
+                const rightPad = captureRightPad(advance(st));
+                const token = createToken(st, type, lexeme, rightPad);
                 return runLexer(advance(addToken(st, token), 2));
             } else {
                 return runLexer(handleOther(st));
@@ -133,7 +145,8 @@ function runLexer(st: State): State {
         case ")": {
             const type = TokenType.RIGHT_PAREN;
             const lexeme = ")";
-            const token = createToken(st, type, lexeme);
+            const rightPad = captureRightPad(st);
+            const token = createToken(st, type, lexeme, rightPad);
             return runLexer(advance(addToken(st, token)));
         }
 
@@ -153,42 +166,48 @@ function runLexer(st: State): State {
             if (lookahead(st, 4) == "##* ") {
                 const type = TokenType.TRIPLE_HASHSTAR;
                 const lexeme = "###*";
-                const token = createToken(st, type, lexeme);
+                const rightPad = captureRightPad(advance(st, 3));
+                const token = createToken(st, type, lexeme, rightPad);
                 return runLexer(advance(addToken(st, token), 4));
             }
 
             if (lookahead(st, 3) == "## ") {
                 const type = TokenType.TRIPLE_HASH;
                 const lexeme = "###";
-                const token = createToken(st, type, lexeme);
+                const rightPad = captureRightPad(advance(st, 2));
+                const token = createToken(st, type, lexeme, rightPad);
                 return runLexer(advance(addToken(st, token), 3));
             }
 
             if (lookahead(st, 3) == "#* ") {
                 const type = TokenType.DOUBLE_HASHSTAR;
                 const lexeme = "##*";
-                const token = createToken(st, type, lexeme);
+                const rightPad = captureRightPad(advance(st, 2));
+                const token = createToken(st, type, lexeme, rightPad);
                 return runLexer(advance(addToken(st, token), 3));
             }
 
             if (lookahead(st, 2) == "# ") {
                 const type = TokenType.DOUBLE_HASH;
                 const lexeme = "##";
-                const token = createToken(st, type, lexeme);
+                const rightPad = captureRightPad(advance(st));
+                const token = createToken(st, type, lexeme, rightPad);
                 return runLexer(advance(addToken(st, token), 2));
             }
 
             if (lookahead(st, 2) == "* ") {
                 const type = TokenType.HASHSTAR;
                 const lexeme = "#*";
-                const token = createToken(st, type, lexeme);
+                const rightPad = captureRightPad(advance(st));
+                const token = createToken(st, type, lexeme, rightPad);
                 return runLexer(advance(addToken(st, token), 2));
             }
 
             if (lookahead(st) == " ") {
                 const type = TokenType.HASH;
                 const lexeme = "#";
-                const token = createToken(st, type, lexeme);
+                const rightPad = captureRightPad(st);
+                const token = createToken(st, type, lexeme, rightPad);
                 return runLexer(advance(addToken(st, token)));
             }
 
@@ -233,8 +252,9 @@ function runLexer(st: State): State {
                 const type = TokenType.AT_DELIM;
                 // -1 because the newSt's position is the whitespace
                 // char after the @XYZ.
-                const lexeme = lookahead(st, newSt.position - 1);
-                const token = createToken(st, type, lexeme);
+                const lexeme = substringBetweenStates(st, newSt);
+                const rightPad = captureRightPad(newSt);
+                const token = createToken(st, type, lexeme, rightPad);
 
                 // Add it to the newSt and move on.
                 return runLexer(addToken(newSt, token));
@@ -258,7 +278,9 @@ function runLexer(st: State): State {
                 // but we won't be doing anything with this lexeme
                 // so it's fine.
                 const lexeme = "\n";
-                const token = createToken(st, type, lexeme);
+                // Note for EMPTY_ROW we don't keep any rightPad since
+                // it's not really relevant here.
+                const token = createToken(st, type, lexeme, "");
                 return runLexer(addToken(newSt, token));
             } else {
                 // If it's not an empty row then we just ignore the
@@ -320,10 +342,12 @@ function handleOrderedList(st: State): State {
     });
 
     // The numbers need to be followed by a dot and space.
+    // TODO: shouldn't this be a lookahead for "." too?
     if (curChar(newSt) == "." && lookahead(newSt) == " ") {
         const type = TokenType.OL_ITEM;
         const lexeme = substringBetweenStates(st, newSt);
-        const token = createToken(st, type, lexeme);
+        const rightPad = captureRightPad(newSt);
+        const token = createToken(st, type, lexeme, rightPad);
         return advance(addToken(newSt, token));
     } else {
         // Otherwise, just treat it as a word.
@@ -333,16 +357,19 @@ function handleOrderedList(st: State): State {
 
 // TODO: Need to lex this properly...
 // TODO: Scan the whole line, actually.
+// TODO: -----------------------------
 function handleMacroDef(st: State): State {
     const type = TokenType.MACRO_DEF;
     const lexeme = "macro";
-    const token = createToken(st, type, lexeme);
+    // We don't keep padding here since we just ate an
+    // entire line so there's no significant padding
+    // to capture here.
+    const token = createToken(st, type, lexeme, "");
     return advance(addToken(st, token), 5);
 }
 
 // Eats up the TEX <<< <MARKER> line and all lines until the ending
 // <MARKER> line.
-// TODO: Testing. Apparently goes into an infinite loop somewhere.
 function handleHeredoc(st: State): State {
     // Advance until we reach a newline.
     const newSt = advanceWhile(st, (curSt) => {
@@ -439,11 +466,19 @@ function handleHeredoc(st: State): State {
     // closing delimiter line, so the substring between them
     // contains all the raw tex code (including some extra
     // \n's around it which we slice off).
+    // TODO: Actually, I think I should get the substring
+    // TODO: between st and newSt3. Because again, we want
+    // TODO: the lexemes to include all the extra stuff as
+    // TODO: well such that we canmore or less make an
+    // TODO: accurate reconstruction of the source just
+    // TODO: from the tokens.
+    // TODO: ------------------------------------------------
     const innerStr = substringBetweenStates(newSt, newSt2).slice(1,-1);
 
     const type = TokenType.HEREDOC_BLOCK;
     const lexeme = innerStr;
-    const token = createToken(st, type, lexeme);
+    // No significant padding here either.
+    const token = createToken(st, type, lexeme, "");
     return addToken(newSt3, token);
 }
 
@@ -459,31 +494,43 @@ function handleWord(st: State): State {
 
     const type = TokenType.WORD;
     const lexeme = escaped;
-    const token = createToken(st, type, lexeme);
+    // TODO: Test if the captured padding is correct or not.
+    // TODO: Cos IDK if advanceWhileEscaping stops at the
+    // TODO: last char of the word or the following whitespace.
+    // TODO: ------------------------------------------------
+    const rightPad = captureRightPad(newSt);
+    const token = createToken(st, type, lexeme, rightPad);
     // TODO: Am I supposed to advance here?
+    // TODO: ------------------------------
     return advance(addToken(newSt, token));
 }
 
-// Starts the lexer and returns the final tokens.
+/**
+* Starts the lexer and returns the final tokens.
+* @param {string} src The source string to lex.
+* @returns {Token[]} List of tokens.
+*/
 export function lex(src: string): Token[] {
     const st = newState(src);
 
     // We insert the SOF token first before running the lexer.
     const sofType = TokenType.SOF;
     const sofLexeme = "";
-    const sofToken = createToken(st, sofType, sofLexeme);
+    // No padding for SOF or EOF of course.
+    const sofToken = createToken(st, sofType, sofLexeme, "");
     const newSt = runLexer(addToken(st, sofToken));
 
     // We insert the EOF token at the end after lexing.
     const eofType = TokenType.EOF;
     const eofLexeme = "";
-    const eofToken = createToken(newSt, eofType, eofLexeme);
+    const eofToken = createToken(newSt, eofType, eofLexeme, "");
     const finalState = addToken(newSt, eofToken);
 
     // TODO: We shouldn't be printing or doing any IO
     // TODO: inside lex, since we don't know where
     // TODO: this is function is being used (i.e could
     // TODO: be the terminal or could be on the web).
+    // TODO: -----------------------------------------
     // Print errors if any.
     if (finalState.errors.length > 0) {
         finalState.errors.forEach((e: LexerError) => e.print());

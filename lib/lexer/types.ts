@@ -44,7 +44,10 @@ export type Token = {
     type: TokenType,
     lexeme: string,
     // Position of the token in the source string.
-    position: number
+    position: number,
+    // Whitespace to the left of the token lexeme,
+    // until the start of a new token (including EMPTY_ROW)
+    rightPad: string,
     // Column/row in the source file.
     col: number,
     row: number

@@ -37,11 +37,13 @@ export function attachError(oldState: State, err: LexerError): State {
 // with the state at the BEGINNING of the lexeme
 // (i.e before calling advance any number of times),
 // otherwise it'll mess up the position/col/row fields.
-export function createToken(state: State, type: TokenType, lexeme: string): Token {
+// ALSO collects whitespace after the token lexeme.
+export function createToken(state: State, type: TokenType, lexeme: string, rightPad: string): Token {
     return {
         type,
         lexeme,
         position: state.position,
+        rightPad,
         col: state.col,
         row: state.row
     };
@@ -190,6 +192,24 @@ export function lookback(state: State, n: number = 1): string {
 
     const sliceSize = Math.max(lookbackPosition, bound);
     return state.source.slice(sliceSize, position);
+}
+
+// Captures the whitespace that follows the current position
+// of the state, up to any non-whitespace character, or until
+// an empty row (i.e double newline). The character at the
+// current position of the state is not included.
+export function captureRightPad(state: State): string {
+    // We collect whitespace until we reach a non-whitespace character
+    // (i.e start of a new token) OR a double newline (i.e an EMPTY_ROW)
+    // token.
+    const newState = advanceWhile(state, (curSt) => {
+        const whitespace = /\s/.test(lookahead(curSt));
+        const emptyRow   = /\n\n/.test(lookahead(curSt, 2));
+        // Advance while we see whitespace and no empty rows.
+        return whitespace && !emptyRow
+    });
+
+    return substringBetweenStates(state, newState).slice(1);
 }
 
 // Returns the character at the current position in
