@@ -470,8 +470,8 @@ function handleLinkOrImage(st: State, nodeType: BranchType): State {
     return advance(addNode(newSt, node), 3);
 }
 
-export function parse(tokens: Token[]): AST {
+export function parse(tokens: Token[]): State {
     const state = newState(tokens);
     const finalState = runParser(state);
-    return finalState.tree;
+    return finalState;
 }

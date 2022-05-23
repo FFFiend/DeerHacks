@@ -667,9 +667,9 @@ function handleWord(st: State): State {
 /**
 * Starts the lexer and returns the final tokens.
 * @param {string} src The source string to lex.
-* @returns {Token[]} List of tokens.
+* @returns {State} The final state after lexing the entire source string.
 */
-export function lex(src: string): Token[] {
+export function lex(src: string): State {
     const st = newState(src);
 
     // We insert the SOF token first before running the lexer.
@@ -685,23 +685,5 @@ export function lex(src: string): Token[] {
     const eofToken = createToken(newSt, eofType, eofLexeme, "");
     const finalState = addToken(newSt, eofToken);
 
-    // TODO: We shouldn't be printing or doing any IO
-    // TODO: inside lex, since we don't know where
-    // TODO: this is function is being used (i.e could
-    // TODO: be the terminal or could be on the web).
-    // TODO: -----------------------------------------
-    // Print errors if any.
-    if (finalState.errors.length > 0) {
-        finalState.errors.forEach((e: LexerError) => e.print());
-    }
-
-    // Check if any errors were fatal. If so,
-    // we don't return any tokens.
-    if (finalState.errors.some((e: LexerError) => e.fatal)) {
-        return [];
-    }
-
-    // TODO: Should I just return the final state itself
-    // TODO: instead of just the tokens?
-    return finalState.tokens;
+    return finalState
 }
