@@ -1,30 +1,23 @@
 import { Token } from "../lexer/types.ts";
-
-// Macro definitions.
-export type MacroDefData = {
-    name: string,
-    params: string[],
-    body: string
-}
-
-// Keep track of parser state.
-export type ParserState = {
-    tokens: Token[],
-    position: number,
-    tree: AST,
-    macroDefs: MacroDefData[]
-}
+import { ParseError } from "./errors.ts";
 
 // These nodes never have any children. Their data
 // contains raw strings which will be written to
 // the LaTeX files as-is.
 export enum LeafType {
+    // Plain word
     WORD,
+    // @xyz
     AT_DELIM,
+    // TEX <<< EOF ... EOF
     RAW_TEX,
+    // $ ... $
     TEX_INLINE_MATH,
+    // $$ ... $$
     TEX_DISPLAY_MATH,
+    // \( ... \)
     LATEX_INLINE_MATH,
+    // \[ ... \]
     LATEX_DISPLAY_MATH,
 }
 
@@ -48,10 +41,42 @@ export enum BranchType {
     PARAGRAPH
 }
 
-export type NodeData = string | null;
-
 // Each node is either a leaf node or a branch node.
 export type NodeType = LeafType | BranchType;
+
+// All nodes that carry data have at least
+// a lexeme and rightPad field.
+export type BaseNodeData = {
+    lexeme: string,
+    rightPad: string
+}
+
+// RAW_TEX
+export type RawTexData = BaseNodeData & {
+    // The delimiter used.
+    delimiter: string
+}
+
+// LINK and IMAGE
+export type LinkImageData = BaseNodeData & {
+    // The image path or uri for links.
+    ref: string
+}
+
+// TeX macro/command calls inside document
+// TODO: Currently we don't parse macro calls
+// TODO: so this has no use for now.
+export type MacroCallData = BaseNodeData & {
+    name: string,
+    args: string[]
+}
+
+export type NodeData
+    = BaseNodeData
+    | RawTexData
+    | LinkImageData
+    | MacroCallData
+    | null;
 
 // The tree structure.
 export type Node = {

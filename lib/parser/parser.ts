@@ -54,7 +54,14 @@ function runParser(st: State): State {
         // WORD
         case TokenType.WORD: {
             const type = LeafType.WORD;
-            const data = t.lexeme;
+            // TODO: I'm not sure if joining padding and the
+            // TODO: lexeme together here is the "right" way
+            // TODO: to solve the whitespace-rendering
+            // TODO: problem. Maybe data should be an object
+            // TODO: containing the lexeme and the padding?
+            // TODO: And then for other nodes it could
+            // TODO: possibly contain other stuff too.
+            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
             const node = createLeaf(st, type, data);
             return runParser(advance(addNode(st, node)));
         }
@@ -62,19 +69,12 @@ function runParser(st: State): State {
         // AT_DELIM
         case TokenType.AT_DELIM: {
             const type = LeafType.AT_DELIM;
-            // We don't need the @ at the start.
-            const data = t.lexeme.slice(1);
+            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
             const node = createLeaf(st, type, data);
             return runParser(advance(addNode(st, node)));
         }
 
         // MACRO_DEF
-        // TODO: Below.
-        // Do I need these inside the AST? They're not actually
-        // part of the document that will be generated, they're
-        // part of the preamble. Maybe I should add an extra field
-        // on the State to store macro definitions, and then over
-        // here I add the macro def data to that field.
         case TokenType.MACRO_DEF: {
             const data = extractMacroDefData(t);
             return runParser(advance(attachMacroData(st, data)));
@@ -83,7 +83,11 @@ function runParser(st: State): State {
         // RAW_TEX
         case TokenType.HEREDOC_BLOCK: {
             const type = LeafType.RAW_TEX;
-            const data = t.lexeme;
+            // TODO: The scanner SHOULDN'T slice off the lines.
+            // TODO: Keep them in the lexeme, let the renderer
+            // TODO: handle it, and add the delimiter to the
+            // TODO: data object.
+            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
             const node = createLeaf(st, type, data);
             return runParser(advance(addNode(st, node)));
         }
@@ -91,7 +95,7 @@ function runParser(st: State): State {
         // TEX_INLINE_MATH
         case TokenType.TEX_INLINE_MATH: {
             const type = LeafType.TEX_INLINE_MATH;
-            const data = t.lexeme.slice(1,-1);
+            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
             const node = createLeaf(st, type, data);
             return runParser(advance(addNode(st, node)));
         }
@@ -99,7 +103,7 @@ function runParser(st: State): State {
         // TEX_DISPLAY_MATH
         case TokenType.TEX_DISPLAY_MATH: {
             const type = LeafType.TEX_DISPLAY_MATH;
-            const data = t.lexeme.slice(2,-2);
+            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
             const node = createLeaf(st, type, data);
             return runParser(advance(addNode(st, node)));
         }
@@ -107,7 +111,7 @@ function runParser(st: State): State {
         // LATEX_INLINE_MATH
         case TokenType.LATEX_INLINE_MATH: {
             const type = LeafType.LATEX_INLINE_MATH;
-            const data = t.lexeme.slice(1,-1);
+            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
             const node = createLeaf(st, type, data);
             return runParser(advance(addNode(st, node)));
         }
@@ -115,7 +119,7 @@ function runParser(st: State): State {
         // LATEX_DISPLAY_MATH
         case TokenType.LATEX_DISPLAY_MATH: {
             const type = LeafType.LATEX_DISPLAY_MATH;
-            const data = t.lexeme.slice(2,-2);
+            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
             const node = createLeaf(st, type, data);
             return runParser(advance(addNode(st, node)));
         }
@@ -209,7 +213,7 @@ function runParser(st: State): State {
         // LEFT_BRACKET / BANG_BRACKET
         case TokenType.BRACKET_PAREN: {
             const type = LeafType.WORD;
-            const data = t.lexeme;
+            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
             const node = createLeaf(st, type, data);
             return runParser(advance(addNode(st, node)));
         }
@@ -217,7 +221,7 @@ function runParser(st: State): State {
         // RIGHT_PAREN is treated the same as BRACKET_PAREN.
         case TokenType.RIGHT_PAREN: {
             const type = LeafType.WORD;
-            const data = t.lexeme;
+            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
             const node = createLeaf(st, type, data);
             return runParser(advance(addNode(st, node)));
         }
@@ -422,13 +426,14 @@ function handleLinkOrImage(st: State, nodeType: BranchType): State {
     // a LINK or IMAGE.
     // TODO: Testing (is there a case where curToken might
     // TODO: cause an out of bound error?)
+    // TODO: -------------------------------
     if (curToken(newSt).type == TokenType.EOF) {
         // If we didn't find a BRACKET_PAREN, we go back
         // to the original st state, treat the current
         // token as a WORD and then continue parsing from
         // there.
         const type = LeafType.WORD;
-        const data = t.lexeme;
+        const data = { lexeme: t.lexeme, rightPad: t.rightPad };
         const node = createLeaf(st, type, data);
         // We add the node to st
         return advance(addNode(st, node));
@@ -448,7 +453,7 @@ function handleLinkOrImage(st: State, nodeType: BranchType): State {
     const validParen = paren && (paren.type == TokenType.RIGHT_PAREN);
     if (!validRef || !validParen) {
         const type = LeafType.WORD;
-        const data = t.lexeme;
+        const data = { lexeme: t.lexeme, rightPad: t.rightPad };
         const node = createLeaf(st, type, data);
         return advance(addNode(st, node));
     }
@@ -461,7 +466,7 @@ function handleLinkOrImage(st: State, nodeType: BranchType): State {
 
     // Create, add the node and move on.
     const type = nodeType;
-    const data = ref.lexeme;
+    const data = { lexeme: ref.lexeme, rightPad: ref.rightPad };
     const children = subTree;
     const node = createBranch(st, type, data, children);
     // We advance thrice since newSt is sitting on
