@@ -480,3 +480,9 @@ export function parse(tokens: Token[]): State {
     const finalState = runParser(state);
     return finalState;
 }
+
+export function happyParse(tokens: Token[]): AST {
+    const finalState = parse(tokens);
+    finalState.errors.forEach(e => e.print());
+    return finalState.tree;
+}

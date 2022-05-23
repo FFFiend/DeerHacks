@@ -687,3 +687,15 @@ export function lex(src: string): State {
 
     return finalState
 }
+
+/**
+* Runs the lexer on the source and returns the final list of
+* tokens. Lexer errors, if any, are printed to the console.
+* @param {string} src - The source string to lex.
+* @returns {Token[]} List of scanned token objects.
+*/
+export function happyLex(src: string): Token[] {
+    const finalState = lex(src);
+    finalState.errors.forEach(e => e.print());
+    return finalState.tokens;
+}
