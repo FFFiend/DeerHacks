@@ -1,7 +1,8 @@
 import { Token, TokenType, LexerState as State, LexerError } from "./types.ts";
 import {
+    UnexpectedCharError,
     UnrecognizedCharError,
-    UnexpectedCharError
+    UnclosedSequenceError
 } from "./errors.ts";
 
 import {
@@ -55,6 +56,142 @@ function runLexer(st: State): State {
     const c = curChar(st);
 
     switch (c) {
+        // TEX_INLINE_MATH, TEX_DISPLAY_MATH
+        // TODO: Pull this into it's own handler.
+        case "$": {
+            if (lookahead(st) == "$") {
+                // TODO: Change this to an advanceUntil.
+                const newSt = advanceWhile(st, (curSt) => {
+                    // Advance until we see the closing $$.
+                    return lookahead(curSt, 2) != "$$";
+                });
+
+                // Check that we actually found the closing $$
+                // instead of advanceWhile finishing because of
+                // running out of source.
+                if (lookahead(newSt, 2) != "$$") {
+                    const hint = [
+                        "If you did not mean to insert a math delimiter,",
+                        "you should escape the character with a backslash:",
+                        "'\\$\\$'"
+                    ].join("\n");
+
+                    const err = new UnclosedSequenceError(st, "$$", hint);
+                    // Attach error, handle the $$ as a WORD,
+                    // and move on.
+                    return runLexer(handleOther(attachError(st, err)));
+                }
+
+                // Advance twice since we're currently on the
+                // character right before the closing $$.
+                const newSt2 = advance(newSt, 2);
+                const substring = substringBetweenStates(st, newSt2);
+                const type = TokenType.TEX_DISPLAY_MATH;
+                const lexeme = substring;
+                const rightPad = captureRightPad(newSt2);
+                const token = createToken(st, type, lexeme, rightPad);
+
+                return runLexer(advance(addToken(newSt2, token)));
+            } else {
+                const newSt = advanceWhile(st, (curSt) => {
+                    return lookahead(curSt) != "$";
+                });
+
+                // Check that we actually found the closing $$
+                // instead of advanceWhile finishing because of
+                // running out of source.
+                if (lookahead(newSt) != "$") {
+                    const hint = [
+                        "If you did not mean to insert a math delimiter,",
+                        "you should escape the character with a backslash:",
+                        "'\\$'"
+                    ].join("\n");
+
+                    const err = new UnclosedSequenceError(st, "$", hint);
+                    // Attach error, handle the $ as a WORD,
+                    // and move on.
+                    return runLexer(handleOther(attachError(st, err)));
+                }
+
+                // Advance twice since we're currently on the
+                // character right before the closing $$.
+                const newSt2 = advance(newSt);
+                const substring = substringBetweenStates(st, newSt2);
+                const type = TokenType.TEX_INLINE_MATH;
+                const lexeme = substring;
+                const rightPad = captureRightPad(newSt2);
+                const token = createToken(st, type, lexeme, rightPad);
+
+                return runLexer(advance(addToken(newSt2, token)));
+            }
+        }
+
+        // LATEX_DISPLAY_MATH, LATEX_INLINE_MATH
+        case "\\": {
+            if (lookahead(st) == "(") {
+                const newSt = advanceWhile(st, (curSt) => {
+                    return lookahead(curSt, 2) != "\\)";
+                });
+
+                if (lookahead(newSt, 2) != "\\)") {
+                    const hint = [
+                        "If you did not mean to insert a math delimiter,",
+                        "you should escape the character with a backslash:",
+                        "'\\\\('"
+                    ].join("\n");
+
+                    const err = new UnclosedSequenceError(st, "\\)", hint);
+                    // Attach error, handle the $ as a WORD,
+                    // and move on.
+                    return runLexer(handleOther(attachError(st, err)));
+                }
+
+                // Advance twice since we're currently on the
+                // character right before the closing $$.
+                const newSt2 = advance(newSt, 2);
+                const substring = substringBetweenStates(st, newSt2);
+                const type = TokenType.TEX_INLINE_MATH;
+                const lexeme = substring;
+                const rightPad = captureRightPad(newSt2);
+                const token = createToken(st, type, lexeme, rightPad);
+
+                return runLexer(advance(addToken(newSt2, token)));
+            }
+
+            if (lookahead(st) == "[") {
+                const newSt = advanceWhile(st, (curSt) => {
+                    return lookahead(curSt, 2) != "\\]";
+                });
+
+                if (lookahead(newSt, 2) != "\\]") {
+                    const hint = [
+                        "If you did not mean to insert a math delimiter,",
+                        "you should escape the character with a backslash:",
+                        "'\\\\['"
+                    ].join("\n");
+
+                    const err = new UnclosedSequenceError(st, "\\]", hint);
+                    // Attach error, handle the $ as a WORD,
+                    // and move on.
+                    return runLexer(handleOther(attachError(st, err)));
+                }
+
+                // Advance twice since we're currently on the
+                // character right before the closing $$.
+                const newSt2 = advance(newSt, 2);
+                const substring = substringBetweenStates(st, newSt2);
+                const type = TokenType.TEX_INLINE_MATH;
+                const lexeme = substring;
+                const rightPad = captureRightPad(newSt2);
+                const token = createToken(st, type, lexeme, rightPad);
+
+                return runLexer(advance(addToken(newSt2, token)));
+            }
+
+            // If it's neither, then we handle it as a macro call.
+            return runLexer(handleMacroCall(st));
+        }
+
         // STAR, DOUBLE_STAR *, **
         case "*": {
             if (lookahead(st) == "*") {
