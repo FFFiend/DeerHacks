@@ -15,7 +15,8 @@ export function newState(tokens: Token[]): State {
         tokens: tokens,
         position: 0,
         tree: [],
-        macroDefs: []
+        macroDefs: [],
+        errors: []
     };
 }
 
@@ -24,7 +25,8 @@ export function attachMacroData(oldState: State, data: MacroDefData): State {
         tokens: [...oldState.tokens],
         position: oldState.position,
         tree: [...oldState.tree],
-        macroDefs: [...oldState.macroDefs, data]
+        macroDefs: [...oldState.macroDefs, data],
+        errors: [...oldState.errors]
     };
 }
 
@@ -60,7 +62,8 @@ export function addNode(oldState: State, node: Node): State {
         tokens: [...oldState.tokens],
         position: oldState.position,
         tree: [...oldState.tree, node],
-        macroDefs: [...oldState.macroDefs]
+        macroDefs: [...oldState.macroDefs],
+        errors: [...oldState.errors]
     };
 }
 
@@ -71,7 +74,8 @@ export function advanceOnce(oldState: State): State {
             tokens: [...oldState.tokens],
             position: oldState.position + 1,
             tree: [...oldState.tree],
-            macroDefs: [...oldState.macroDefs]
+            macroDefs: [...oldState.macroDefs],
+            errors: [...oldState.errors]
         };
     } else {
         return oldState;

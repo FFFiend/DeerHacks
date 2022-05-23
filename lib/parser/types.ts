@@ -65,3 +65,24 @@ export type Node = {
 
 // The AST is a list of nodes.
 export type AST = Node[]
+
+// Macro definitions. Note this isn't included
+// in NodeData because it's attached separately
+// to the state (in the macroDefs list).
+export type MacroDefData = {
+    name: string,
+    params: string[],
+    body: string
+}
+
+// Errors. Right now unimplemented.
+export type ParserError = ParseError
+
+// Keep track of parser state.
+export type ParserState = {
+    tokens: Token[],
+    position: number,
+    tree: AST,
+    macroDefs: MacroDefData[],
+    errors: ParserError[]
+}
