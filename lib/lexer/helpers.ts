@@ -132,16 +132,21 @@ export function escapeWord(str: string): string {
     let acc = "";
     let i = 0;
     while (i < str.length) {
+        // If the current is a \ and the next is an escapable
+        // character (*, %, ~, _, etc.) then only add the
+        // escaped char to the accumulator, skipping the \,
+        // and increment i by 2 to move on.
         if (str[i] == "\\") {
             if (/[\\*%~_]/.test(str[i+1])) {
                 acc = acc + str[i+1];
                 i = i + 2;
                 continue;
             }
-        } else {
-            acc = acc + str[i];
-            i = i + 1;
         }
+        // Otherwise add the char to the accumulator and
+        // continue.
+        acc = acc + str[i];
+        i = i + 1;
     }
     return acc;
 }
