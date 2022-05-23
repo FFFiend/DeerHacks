@@ -237,7 +237,7 @@ export function hasSourceLeft(state: State): boolean {
 
 // Shortens longer lexemes to a length of 25 characters.
 export function constrainLexeme(lexeme: string): string {
-    const shortEnough = Math.max(lexeme.length, 25) == 25;
+    const shortEnough = Math.max(lexeme.length, 50) == 50;
 
     if (shortEnough) {
         return lexeme;
