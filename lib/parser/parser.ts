@@ -398,7 +398,7 @@ function handleRowNode(st: State, nodeType: BranchType): State {
     // Get the inner AST.
     const subTree = runParser(subState).tree;
 
-    const type = BranchType.SECTION;
+    const type = nodeType;
     const data = null;
     const children = subTree;
     const node = createBranch(st, type, data, children);
