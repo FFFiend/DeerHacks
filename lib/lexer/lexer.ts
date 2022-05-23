@@ -312,6 +312,12 @@ function isAtStartOfLine(st: State): boolean {
     return lookback(st) == "\n" || lookback(st) == "";
 }
 
+// TODO: Handle macro calls here. Markup doesn't (shouldnt?)
+// TODO: work inside macro params? Not sure...
+function handleMacroCall(st: State): State {
+    return handleOther(st);
+}
+
 // The default case for the switch statement, when
 // a character doesn't match any special context.
 function handleOther(st: State): State {
