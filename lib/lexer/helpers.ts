@@ -179,6 +179,15 @@ export function substringBetweenStates(stateA: State, stateB: State): string {
     return source.slice(start, end + 1);
 }
 
+// Checks whether the state is currently at the
+// start of a line. That is, if it's at the very
+// first character of a file, OR the previous
+// character is a newline.
+export function isAtStartOfLine(st: State): boolean {
+    return st.col === 1;
+    //return lookback(st) == "\n" || lookback(st) == "";
+}
+
 // Returns the next n characters in source. n is optional,
 // and defaults to 1. If there are no more characters left,
 // returns an empty string. If there are fewer than n

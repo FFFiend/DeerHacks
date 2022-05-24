@@ -17,32 +17,28 @@ import {
     createToken,
     advanceWhile,
     hasSourceLeft,
+    isAtStartOfLine,
     captureRightPad,
     advanceWhileEscaping,
     substringBetweenStates
 } from "./helpers.ts";
 
-// TODO: Change lexer so that lexemes also include the whitespace
-// TODO: that follows them (excluding newlines). For example, for
-// TODO: "word1 word2", the first lexeme should be "word1 " (with
-// TODO: the space at the end) and the second should be "word2"
-// TODO: (no space). The idea is that after lexing, if I take all
-// TODO: the tokens and join their lexemes together again, the
-// TODO: resulting string should match with the original source.
-// TODO: Maybe I can include the whitespace in the lexeme but NOT
-// TODO: actually advance the state over that whitespace, since a
-// TODO: lot of stuff like advance depends on this whitespace to
-// TODO: determine position/structure/etc.
-
-// TODO: Make sure all TokenTypes are added. Some like TEX/LATEX
-// TODO: math delimiters are missing.
-
-// TODO: Add SOF/EOF tokens.
-
-// TODO: Errors.
+// TODO: Implement errors.
+// TODO: --------------------------------------------------------
 
 // TODO: Add a new "advanceUntil" helper and use that wherever it
 // TODO: helps readability.
+// TODO: --------------------------------------------------------
+
+// TODO: Could speed up the lexer ever so slightly by having the
+// TODO: captureRightPad function be one that returns a state
+// TODO: that's advance up to the next token's char. This way I
+// TODO: needlessly advance the same state multiple times when
+// TODO: capturing right padding (first in captureRightPad, and
+// TODO: then again in the parser itself since the return line
+// TODO: uses the original state that's still positioned behind
+// TODO: the padding.)
+// TODO: --------------------------------------------------------
 
 // Recursively scan the source.
 function runLexer(st: State): State {
