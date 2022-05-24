@@ -54,7 +54,7 @@ export class UnclosedSequenceError extends Error {
 
         const st = this.state;
         this.message = `LexerError: UnclosedSequenceError at ${st.row}:${st.col}`;
-        this.description = `Expected a '${this.expected}' to close the sequence started at line ${st.row}, column ${st.col}, but found none.`;
+        this.description = `Expected a '${this.expected}' to close the sequence started here (line ${st.row}, column ${st.col}), but found none.`;
     }
 
     // TODO: Colors.
