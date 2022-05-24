@@ -104,25 +104,35 @@ export function advanceWhile(oldState: State, fn: (s: State) => boolean): State 
 
 // Special advancing function to handle escaping inside words.
 export function advanceWhileEscaping(st: State): State {
+    // All escapable chars: *, %, ~, _, [, ], !, $, @, ).
+    const escapable = /[*%~_\[\]!$@\)]/;
+    // An escape sequence: a \ followed by an escapable char.
+    const escapeSeq = /\\[*%~_\[\]!$@\)]/;
     const newSt = advanceWhile(st, (curSt) => {
         // We advance until a whitespace or a \ or one of the
-        // special *, %, ~~, __ chars.
+        // escapable chars.
         if (/\s/.test(lookahead(curSt))) return false;
         if (lookahead(curSt) == "\\") return false;
-        if (/[*%]/.test(lookahead(curSt))) return false;
+        if (escapable.test(lookahead(curSt))) return false;
+        /* // Test without these. I think these may be redundant.
         if (lookahead(curSt, 2) == "~~") return false;
         if (lookahead(curSt, 2) == "__") return false;
+        */
+
         // Otherwise continue.
         return true;
     });
 
-    // If we had stopped at a \, it means we're at an escape
-    // sequence, so we immediately skip the \ and the char
-    // following it (since we have to escape it) and then
-    // recurse to keep advancing.
-    if (lookahead(newSt) == "\\") {
+    // If the next two chars match an escape sequence, we
+    // "jump" over them (by advancing twice) so that they
+    // are consumed by the state, and then recurse to keep
+    // moving forward (because we don't know if we're at
+    // the end of the word, since we had stopped at an escape
+    // sequence).
+    if (escapeSeq.test(lookahead(newSt, 2))) {
         return advanceWhileEscaping(advance(newSt, 2));
     } else {
+        // Otherwise, we return the state we have.
         return newSt;
     }
 }
