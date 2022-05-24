@@ -548,25 +548,16 @@ function handleHeredoc(st: State): State {
         return curChar(curSt) != "\n";
     })
 
-    // newSt is at the end of the opening heredoc delimiter
-    // line, and newSt2 was at the end of line before the
-    // closing delimiter line, so the substring between them
-    // contains all the raw tex code (including some extra
-    // \n's around it which we slice off).
-    // TODO: Actually, I think I should get the substring
-    // TODO: between st and newSt3. Because again, we want
-    // TODO: the lexemes to include all the extra stuff as
-    // TODO: well such that we canmore or less make an
-    // TODO: accurate reconstruction of the source just
-    // TODO: from the tokens.
-    // TODO: ------------------------------------------------
-    const innerStr = substringBetweenStates(newSt, newSt2).slice(1,-1);
+    // Collect the lexeme, from the TEX <<< EOF line to the
+    // ending EOF delimiter (excluding the \n at the end).
+    const innerStr = substringBetweenStates(st, newSt3).slice(0,-1);
 
     const type = TokenType.HEREDOC_BLOCK;
     const lexeme = innerStr;
     // No significant padding here either.
     const token = createToken(st, type, lexeme, "");
-    return addToken(newSt3, token);
+    // Advance to move past the \n that newSt3 is on.
+    return advance(addToken(newSt3, token));
 }
 
 // Eats up everything until whitespace or one of the following:
