@@ -53,135 +53,42 @@ function runLexer(st: State): State {
 
     switch (c) {
         // TEX_INLINE_MATH, TEX_DISPLAY_MATH
-        // TODO: Pull this into it's own handler.
         case "$": {
+            // Check if it's a double $$ for display math.
             if (lookahead(st) == "$") {
-                // TODO: Change this to an advanceUntil.
-                const newSt = advanceWhile(st, (curSt) => {
-                    // Advance until we see the closing $$.
-                    return lookahead(curSt, 2) != "$$";
-                });
-
-                // Check that we actually found the closing $$
-                // instead of advanceWhile finishing because of
-                // running out of source.
-                if (lookahead(newSt, 2) != "$$") {
-                    const hint = [
-                        "If you did not mean to insert a math delimiter,",
-                        "you should escape the character with a backslash:",
-                        "'\\$\\$'"
-                    ].join("\n");
-
-                    const err = new UnclosedSequenceError(st, "$$", hint);
-                    // Attach error, handle the $$ as a WORD,
-                    // and move on.
-                    return runLexer(handleOther(attachError(st, err)));
-                }
-
-                // Advance twice since we're currently on the
-                // character right before the closing $$.
-                const newSt2 = advance(newSt, 2);
-                const substring = substringBetweenStates(st, newSt2);
-                const type = TokenType.TEX_DISPLAY_MATH;
-                const lexeme = substring;
-                const rightPad = captureRightPad(newSt2);
-                const token = createToken(st, type, lexeme, rightPad);
-
-                return runLexer(advance(addToken(newSt2, token)));
-            } else {
-                const newSt = advanceWhile(st, (curSt) => {
-                    return lookahead(curSt) != "$";
-                });
-
-                // Check that we actually found the closing $$
-                // instead of advanceWhile finishing because of
-                // running out of source.
-                if (lookahead(newSt) != "$") {
-                    const hint = [
-                        "If you did not mean to insert a math delimiter,",
-                        "you should escape the character with a backslash:",
-                        "'\\$'"
-                    ].join("\n");
-
-                    const err = new UnclosedSequenceError(st, "$", hint);
-                    // Attach error, handle the $ as a WORD,
-                    // and move on.
-                    return runLexer(handleOther(attachError(st, err)));
-                }
-
-                // Advance twice since we're currently on the
-                // character right before the closing $$.
-                const newSt2 = advance(newSt);
-                const substring = substringBetweenStates(st, newSt2);
-                const type = TokenType.TEX_INLINE_MATH;
-                const lexeme = substring;
-                const rightPad = captureRightPad(newSt2);
-                const token = createToken(st, type, lexeme, rightPad);
-
-                return runLexer(advance(addToken(newSt2, token)));
+                return runLexer(handleMathDelimiter(
+                    st,
+                    "$$",
+                    TokenType.TEX_DISPLAY_MATH
+                ));
             }
+
+            // If not, lex it as inline math.
+            return runLexer(handleMathDelimiter(
+                st,
+                "$",
+                TokenType.TEX_INLINE_MATH
+            ));
         }
 
         // LATEX_DISPLAY_MATH, LATEX_INLINE_MATH
         case "\\": {
-            if (lookahead(st) == "(") {
-                const newSt = advanceWhile(st, (curSt) => {
-                    return lookahead(curSt, 2) != "\\)";
-                });
-
-                if (lookahead(newSt, 2) != "\\)") {
-                    const hint = [
-                        "If you did not mean to insert a math delimiter,",
-                        "you should escape the character with a backslash:",
-                        "'\\\\('"
-                    ].join("\n");
-
-                    const err = new UnclosedSequenceError(st, "\\)", hint);
-                    // Attach error, handle the $ as a WORD,
-                    // and move on.
-                    return runLexer(handleOther(attachError(st, err)));
-                }
-
-                // Advance twice since we're currently on the
-                // character right before the closing $$.
-                const newSt2 = advance(newSt, 2);
-                const substring = substringBetweenStates(st, newSt2);
-                const type = TokenType.TEX_INLINE_MATH;
-                const lexeme = substring;
-                const rightPad = captureRightPad(newSt2);
-                const token = createToken(st, type, lexeme, rightPad);
-
-                return runLexer(advance(addToken(newSt2, token)));
+            // Check if it's \[ for LaTeX display math.
+            if (lookahead(st) == "[") {
+                return runLexer(handleMathDelimiter(
+                    st,
+                    "\\]",
+                    TokenType.LATEX_DISPLAY_MATH
+                ));
             }
 
-            if (lookahead(st) == "[") {
-                const newSt = advanceWhile(st, (curSt) => {
-                    return lookahead(curSt, 2) != "\\]";
-                });
-
-                if (lookahead(newSt, 2) != "\\]") {
-                    const hint = [
-                        "If you did not mean to insert a math delimiter,",
-                        "you should escape the character with a backslash:",
-                        "'\\\\['"
-                    ].join("\n");
-
-                    const err = new UnclosedSequenceError(st, "\\]", hint);
-                    // Attach error, handle the $ as a WORD,
-                    // and move on.
-                    return runLexer(handleOther(attachError(st, err)));
-                }
-
-                // Advance twice since we're currently on the
-                // character right before the closing $$.
-                const newSt2 = advance(newSt, 2);
-                const substring = substringBetweenStates(st, newSt2);
-                const type = TokenType.TEX_INLINE_MATH;
-                const lexeme = substring;
-                const rightPad = captureRightPad(newSt2);
-                const token = createToken(st, type, lexeme, rightPad);
-
-                return runLexer(advance(addToken(newSt2, token)));
+            // Of if it's a \( for inline math.
+            if (lookahead(st) == "(") {
+                return runLexer(handleMathDelimiter(
+                    st,
+                    "\\)",
+                    TokenType.LATEX_INLINE_MATH
+                ));
             }
 
             // If it's neither, then we handle it as a macro call.
@@ -430,19 +337,39 @@ function runLexer(st: State): State {
     }
 }
 
-// TODO: Move to helpers
-// TODO: ---------------
-// Checks whether the state is currently at the
-// start of a line. That is, if it's at the very
-// first character of a file, OR the previous
-// character is a newline.
-// TODO: Actually, can't I just do a simple
-// TODO: st.col == 1 check here? Much simpler,
-// TODO: and makes use of the state's structure
-// TODO: as well.
-// TODO: ------------------------------------
-function isAtStartOfLine(st: State): boolean {
-    return lookback(st) == "\n" || lookback(st) == "";
+function handleMathDelimiter(st: State, closeDelim: string, tokenType: TokenType): State {
+    // TODO: Change this to an advanceUntil.
+    const newSt = advanceWhile(st, (curSt) => {
+        // Advance until we see the closing delimiter.
+        return lookahead(curSt, closeDelim.length) != closeDelim;
+    });
+
+    // Check that we actually found the closing $$
+    // instead of advanceWhile finishing because of
+    // running out of source.
+    if (lookahead(newSt, closeDelim.length) != closeDelim) {
+        const hint = [
+            "If you did not mean to insert a math delimiter,",
+            "you should escape the character with a backslash.",
+            "For example: '\\$\\$'"
+        ].join("\n");
+
+        const err = new UnclosedSequenceError(st, closeDelim, hint);
+        // Attach error, backtrack to `st`, handling the
+        // opening delimiter as a WORD, and move on.
+        return handleOther(attachError(st, err));
+    }
+
+    // Advance twice since we're currently on the
+    // character right before the closing delim sequence.
+    const newSt2 = advance(newSt, closeDelim.length);
+    const substring = substringBetweenStates(st, newSt2);
+    const type = tokenType;
+    const lexeme = substring;
+    const rightPad = captureRightPad(newSt2);
+    const token = createToken(st, type, lexeme, rightPad);
+
+    return advance(addToken(newSt2, token));
 }
 
 // TODO: Handle macro calls here. Markup doesn't (shouldnt?)
