@@ -437,17 +437,22 @@ function handleOrderedList(st: State): State {
     }
 }
 
-// TODO: Need to lex this properly...
-// TODO: Scan the whole line, actually.
-// TODO: -----------------------------
+// MACRO_DEF
+// TODO: Currently limited to only a single line.
+// TODO: Eventually, we want users to be able to
+// TODO: define macros spanning multiple lines
+// TODO: as well.
 function handleMacroDef(st: State): State {
+    const newSt = advanceWhile(st, (curSt) => {
+        return lookahead(curSt) != "\n";
+    });
+
     const type = TokenType.MACRO_DEF;
-    const lexeme = "macro";
-    // We don't keep padding here since we just ate an
-    // entire line so there's no significant padding
-    // to capture here.
+    const lexeme = substringBetweenStates(st, newSt);
+    // The rightPad is an empty string since we just ate an
+    // entire line, so there's no significant padding here.
     const token = createToken(st, type, lexeme, "");
-    return advance(addToken(st, token), 5);
+    return advance(addToken(newSt, token));
 }
 
 // Eats up the TEX <<< <MARKER> line and all lines until the ending
