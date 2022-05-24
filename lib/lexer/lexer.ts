@@ -403,7 +403,11 @@ function handleOther(st: State): State {
         return handleWord(st);
     }
 
-    // Ignore extra whitespace.
+    // Ignore extra whitespace. Even though most
+    // whitespace is consumed as rightPad after
+    // lexing tokens, there's still extra newlines
+    // and possibly other whitespace chars that we
+    // can just ignore.
     if (/\s/.test(c)) {
         return advance(st);
     }
@@ -424,7 +428,6 @@ function handleOrderedList(st: State): State {
     });
 
     // The numbers need to be followed by a dot and space.
-    // TODO: shouldn't this be a lookahead for "." too?
     if (curChar(newSt) == "." && lookahead(newSt) == " ") {
         const type = TokenType.OL_ITEM;
         const lexeme = substringBetweenStates(st, newSt);
@@ -572,19 +575,13 @@ function handleWord(st: State): State {
 
     const type = TokenType.WORD;
     const lexeme = escaped;
-    // TODO: Test if the captured padding is correct or not.
-    // TODO: Cos IDK if advanceWhileEscaping stops at the
-    // TODO: last char of the word or the following whitespace.
-    // TODO: ------------------------------------------------
     const rightPad = captureRightPad(newSt);
     const token = createToken(st, type, lexeme, rightPad);
-    // TODO: Am I supposed to advance here?
-    // TODO: ------------------------------
     return advance(addToken(newSt, token));
 }
 
 /**
-* Starts the lexer and returns the final tokens.
+* Starts the lexer and returns the final state object.
 * @param {string} src The source string to lex.
 * @returns {State} The final state after lexing the entire source string.
 */

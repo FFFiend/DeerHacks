@@ -8,34 +8,34 @@ import {
 export enum TokenType {
     // Plain text word.
     WORD,
-    // '@' delimiter
+    // '@' delimiter.
     AT_DELIM,
     // Markup macro definition.
     MACRO_DEF,
-    // 'TEX <<< ...' and '...'
+    // 'TEX <<< ...' and '...'.
     HEREDOC_BLOCK,
-    // TeX Math
+
+    // TeX & LaTeX Math Delimiters.
     TEX_INLINE_MATH, TEX_DISPLAY_MATH,
-    // LaTeX Math
     LATEX_INLINE_MATH, LATEX_DISPLAY_MATH,
 
-    // '*', '**', '__', '~~'
+    // '*', '**', '__', '~~'.
     STAR, DOUBLE_STAR, DOUBLE_UNDERSCORE, DOUBLE_TILDE,
 
     // '#', '##', '###' and star variants.
     HASH, DOUBLE_HASH, TRIPLE_HASH,
     HASHSTAR, DOUBLE_HASHSTAR, TRIPLE_HASHSTAR,
 
-    // '[', '![', '](', ')'
+    // '[', '![', '](', ')'.
     LEFT_BRACKET, BANG_BRACKET,
     BRACKET_PAREN, RIGHT_PAREN,
 
     // Unnumbered/Numbered list items.
     UL_ITEM, OL_ITEM,
 
-    // Start-of-File, End-of-File
+    // Start-of-File, End-of-File.
     SOF, EOF,
-    // An empty line
+    // An empty line.
     EMPTY_ROW
 }
 

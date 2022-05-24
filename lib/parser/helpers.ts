@@ -124,6 +124,10 @@ export function lookahead(state: State, n: number = 1): Token[] {
 }
 
 // Current token at state position.
+// NOTE: This is *not* a safe function, it does
+// NOTE: not check if there are tokens left in
+// NOTE: the state or not. If not, it could
+// NOTE: result in a range error.
 export function curToken(st: State): Token {
     return st.tokens[st.position];
 }
