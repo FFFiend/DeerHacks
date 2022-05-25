@@ -344,13 +344,20 @@ function handleListItems(st: State, isOrderedList: boolean): State {
 }
 
 function handleList(st: State, nodeType: BranchType): State {
-    const newSt
-        = nodeType === BranchType.ENUMERATE
-        ? handleListItems(st, true)
-        : handleListItems(st, false);
+    // Get to the list boundary (which is the same as a paragraph
+    // boundary in our case).
+    const newSt = advanceWhile(st, (curSt) => {
+        return !isAtParagraphBoundary(curSt);
+    });
+
+    const isOrderedList = nodeType === BranchType.ENUMERATE;
+
+    const subList = subListBetweenStates(st, newSt);
+    const subState = newState(subList);
+    const subTree = handleListItems(subState, isOrderedList).tree;
 
     const type = nodeType;
-    const children = newSt.tree;
+    const children = subTree;
     const node = createBranch(st, type, null, children);
     return addNode(newSt, node);
 }
