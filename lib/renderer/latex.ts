@@ -194,7 +194,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            const items = pieces.map((p: string) => "\item " + p);
+            const items = pieces.map((p: string) => "\t\\item " + p);
             const strlist = [
                 "\\begin{itemize}",
                 ...items,
@@ -210,7 +210,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            const items = pieces.map((p: string) => "\item " + p);
+            const items = pieces.map((p: string) => "\t\\item " + p);
             const strlist = [
                 "\\begin{enumerate}",
                 ...items,
