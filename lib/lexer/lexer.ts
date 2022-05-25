@@ -552,8 +552,15 @@ function handleHeredoc(st: State): State {
     })
 
     // Collect the lexeme, from the TEX <<< EOF line to the
-    // ending EOF delimiter (excluding the \n at the end).
-    const innerStr = substringBetweenStates(st, newSt3).slice(0,-1);
+    // ending EOF delimiter, excluding the \n at the end, IF
+    // there is one (if the block is right at the end of the
+    // file, there might not be one).
+    const end
+        = hasSourceLeft(newSt3) && curChar(newSt3) === "\n"
+        ? -1
+        : newSt3.source.length;
+
+    const innerStr = substringBetweenStates(st, newSt3).slice(0, end);
 
     const type = TokenType.HEREDOC_BLOCK;
     const lexeme = innerStr;
