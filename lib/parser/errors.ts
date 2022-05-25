@@ -1,14 +1,17 @@
 import { ParserState as State } from "./types.ts";
 
-export class ParseError extends Error {
+export class UnrecognizedTokenError extends Error {
     private readonly state: State;
+
+    public readonly fatal: boolean;
 
     public constructor(state: State) {
         super();
         this.state = state;
+        this.fatal = true;
     }
 
     public print(): void {
-        console.log("UNIMPLEMENTED!");
+        console.log("%cUNIMPLEMENTED!", "color: red");
     }
 }

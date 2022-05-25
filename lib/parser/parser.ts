@@ -1,5 +1,6 @@
 // Parse tokens into AST.
 import { Token, TokenType } from "../lexer/types.ts";
+import { UnrecognizedTokenError } from "./errors.ts";
 
 import {
     AST,
@@ -16,6 +17,7 @@ import {
     newState,
     lookahead,
     createLeaf,
+    attachError,
     advanceWhile,
     createBranch,
     hasTokensLeft,
@@ -252,8 +254,8 @@ function runParser(st: State): State {
         }
 
         default: {
-            // TODO: This should be an error.
-            return runParser(advance(st));
+            const err = new UnrecognizedTokenError(st);
+            return runParser(advance(attachError(st, err)));
         }
     }
 }

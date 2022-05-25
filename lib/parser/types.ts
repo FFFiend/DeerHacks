@@ -1,5 +1,5 @@
 import { Token } from "../lexer/types.ts";
-import { ParseError } from "./errors.ts";
+import { UnrecognizedTokenError } from "./errors.ts";
 
 // These nodes never have any children. Their data
 // contains raw strings which will be written to
@@ -101,7 +101,7 @@ export type MacroDefData = {
 }
 
 // Errors. Right now unimplemented.
-export type ParserError = ParseError
+export type ParserError = UnrecognizedTokenError
 
 // Keep track of parser state.
 export type ParserState = {

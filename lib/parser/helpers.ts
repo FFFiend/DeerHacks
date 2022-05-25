@@ -2,11 +2,12 @@ import { Token } from "../lexer/types.ts";
 import { constrainLexeme } from "../lexer/helpers.ts";
 import {
     Node,
-    ParserState as State,
     NodeData,
     LeafType,
     BranchType,
-    MacroDefData
+    ParserError,
+    MacroDefData,
+    ParserState as State,
 } from "./types.ts";
 
 // Returns a new parser state object given list of tokens.
@@ -18,6 +19,16 @@ export function newState(tokens: Token[]): State {
         macroDefs: [],
         errors: []
     };
+}
+
+export function attachError(oldState: State, err: ParserError): State {
+    return {
+        tokens: [...oldState.tokens],
+        position: oldState.position,
+        tree: [...oldState.tree],
+        macroDefs: [...oldState.macroDefs],
+        errors: [...oldState.errors, err]
+    }
 }
 
 export function attachMacroData(oldState: State, data: MacroDefData): State {
