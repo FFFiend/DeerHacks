@@ -559,8 +559,12 @@ function handleHeredoc(st: State): State {
     const lexeme = innerStr;
     // No significant padding here either.
     const token = createToken(st, type, lexeme, "");
-    // Advance to move past the \n that newSt3 is on.
-    return advance(addToken(newSt3, token));
+
+    // NOTE: We do NOT want to advance here because we don't
+    // NOTE: want to skip the \n at the end (if we do so, we
+    // NOTE: might end up missing an EMPTY_ROW token that
+    // NOTE: the user would expect to start a new para).
+    return addToken(newSt3, token);
 }
 
 // Eats up everything until whitespace or one of the following:
