@@ -35,7 +35,7 @@ export enum BranchType {
     LINK, IMAGE,
 
     // Lists
-    ITEMIZE, ENUMERATE,
+    ITEMIZE, ENUMERATE, LIST_ITEM,
 
     // Paragraph
     PARAGRAPH

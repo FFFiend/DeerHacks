@@ -228,26 +228,22 @@ function runParser(st: State): State {
 
         // ITEMIZE
         case TokenType.UL_ITEM: {
-            // Advance until next OL_ITEM OR UL_ITEM OR a heading OR a new para.
-            // Everything else is part of the item. Or is there anything else?
-            // TODO.
+            return runParser(handleList(st, BranchType.ITEMIZE));
         }
 
         // ENUMERATE
         case TokenType.OL_ITEM: {
-            // Advance until next OL_ITEM OR UL_ITEM OR a heading OR a new para.
-            // Everything else is part of the item. Or is there anything else?
-            // TODO.
+            return runParser(handleList(st, BranchType.ENUMERATE));
         }
 
         // PARAGRAPH
         case TokenType.SOF: {
-            // TODO: Start a paragraph node here.
+            return runParser(handleParagraphBoundary(st));
         }
 
+        // PARAGRAPH
         case TokenType.EMPTY_ROW: {
-            // TODO: End a paragraph here and then check if the next token
-            // TODO: is a heading or not. If not, then start a new token.
+            return runParser(handleParagraphBoundary(st));
         }
 
         // EOF, just return the state.
@@ -305,27 +301,102 @@ function extractMacroParams(head: string | undefined): string[] {
     return matches || [];
 }
 
-// TODO: Do I actually use this?
-// Given two states, takes the sub-list of tokens
-// between them and converts everything into one
-// large WORD leaf node. Useful for when the parser
-// doesn't find the token it expects, and everything
-// before it needs to be treated like a word (e.g. when
-// parsing LINK and expecting a BRACKET_PAREN but
-// not finding it; we need to go back and convert
-// everything after the initial LEFT_BRACKET into a
-// WORD). The WORD node is added to stateB, and then
-// the state is advanced once (since the token it
-// currently sits on has also been converted into the
-// WORD node) and returned.
-function reduceSubStateToWord(stateA: State, stateB: State): State {
-    const subList = subListBetweenStates(stateA, stateB);
-    const lexemes = subList.map(t => t.lexeme);
+// Check if the given token is a section token i.e
+// HASH and its variants.
+function isAtSectionToken(st: State): boolean {
+    const t = curToken(st).type;
+    return t == TokenType.HASH ||
+           t == TokenType.DOUBLE_HASH ||
+           t == TokenType.TRIPLE_HASH ||
+           t == TokenType.HASHSTAR ||
+           t == TokenType.DOUBLE_HASHSTAR ||
+           t == TokenType.TRIPLE_HASHSTAR;
+}
 
-    const type = LeafType.WORD;
-    const data = lexemes.join("");
-    const node = createLeaf(stateA, type, data);
-    return advance(addNode(stateB, node));
+function isAtParagraphBoundary(st: State): boolean {
+    const emptyRow = curToken(st).type == TokenType.EMPTY_ROW;
+    const eof      = curToken(st).type == TokenType.EOF;
+    return isAtSectionToken(st) || emptyRow || eof;
+}
+
+// Returns state with list item nodes.
+function handleListItems(st: State, isOrderedList: boolean): State {
+    const tokenType = isOrderedList ? TokenType.OL_ITEM : TokenType.UL_ITEM;
+
+    // Currently we know curToken(st) is UL_ITEM or OL_ITEM,
+    // since that's why this function was called. So we advance
+    // once on st before calling advanceWhile on it.
+    const newSt = advanceWhile(advance(st), (curSt) => {
+        // Advance as long as we aren't at a boundary, start of
+        // next list item or end of file.
+        const isAtNextItem = curToken(curSt).type === tokenType;
+        return !isAtParagraphBoundary(curSt) && !isAtNextItem;
+    });
+
+    // We slice off the list item token that st is sitting on,
+    // and the boundary that newSt ends on (a list item token or
+    // empty row or section etc.) before parsing the sublist
+    // (since we don't need them + the list item tokens would
+    // result in infinite recursion).
+    const subList = subListBetweenStates(st, newSt).slice(1,-1);
+    const subState = newState(subList);
+    const subTree = runParser(subState).tree;
+
+    const type = BranchType.LIST_ITEM;
+    const children = subTree;
+    const node = createBranch(st, type, null, children);
+
+    const finalState = addNode(newSt, node);
+
+    // If we stopped at the start of a new list item, recurse and
+    // parse that too. Also need to do a tokens left check in case
+    // we ran out in the advanceWhile.
+    if (hasTokensLeft(newSt) && curToken(newSt).type === tokenType) {
+        return handleListItems(finalState, isOrderedList);
+    } else {
+        // Otherwise if we stopped at a boundary, we return
+        // the final state.
+        return finalState;
+    }
+}
+
+function handleList(st: State, nodeType: BranchType): State {
+    const newSt
+        = nodeType === BranchType.ENUMERATE
+        ? handleListItems(st, true)
+        : handleListItems(st, false);
+
+    const type = nodeType;
+    const children = newSt.tree;
+    const node = createBranch(st, type, null, children);
+    return addNode(newSt, node);
+}
+
+function handleParagraphBoundary(st: State): State {
+    // If the next token is a section/heading, we DON'T
+    // start a new paragraph, since sections are not part
+    // of paragraphs. We just advance and move on from SOF.
+    // Since we're calling advance early, we also need to
+    // check if there are tokens left, otherwise isAtSectionToken
+    // could result in a runtime error (since curToken is not safe).
+    if (hasTokensLeft(advance(st)) && isAtSectionToken(advance(st))) return advance(st);
+
+    // Otherwise, we advance on until the next paragraph
+    // boundary and recursively parse that as usual.
+    const newSt = advanceWhile(st, (curSt) => !isAtParagraphBoundary(curSt));
+
+    // Exclude the SOF token and the paragraph boundary token
+    // from the sublist to prevent infinite recursion.
+    const subList = subListBetweenStates(st, newSt).slice(1,-1);
+    const subState = newState(subList);
+    const subTree = runParser(subState).tree
+
+    const type = BranchType.PARAGRAPH;
+    const data = null;
+    const children = subTree;
+    const node = createBranch(st, type, data, children);
+
+    return advance(addNode(newSt, node));
 }
 
 // Handles stuff enclosed within delimiting tokens,
