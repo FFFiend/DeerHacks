@@ -56,7 +56,7 @@ function renderLeaf(node: Node): string {
 
         // TODO: Proper Error handling!!!
         default: {
-            return "UNIMPLEMENTED!";
+            return `UNIMPLEMENTED: ${Object.keys(node).includes("children") ? BranchType[node.type] : LeafType[node.type]}`;
         }
     }
 }
@@ -227,7 +227,7 @@ function renderBranch(node: Node): string {
         }
 
         default: {
-            return "UNIMPLEMENTED!";
+            return `UNIMPLEMENTED: ${Object.keys(node).includes("children") ? BranchType[node.type] : LeafType[node.type]}`;
         }
     }
 }
