@@ -10,35 +10,48 @@ function renderLeaf(node: Node): string {
             // encompasses both Leaf (which always has data)
             // and Branch (which sometimes has data) nodes,
             // TypeScript thinks data might be null so we have
-            // to handle it with || "". AGAIN: FIND A BETTER
+            // to handle it with a ternary. AGAIN: FIND A BETTER
             // REPRESENTATION!
-            return typeof(node.data) == "string" ? node.data : "";
+            return node.data ? node.data.lexeme + node.data.rightPad : "";
         }
 
         case LeafType.AT_DELIM: {
             // Wrap around inline math delim \(...\)
-            return `\\(${node.data}\\)` || "";
+            return node.data
+                ? `\\(${node.data.lexeme}\\)${node.data.rightPad}`
+                : "";
         }
 
         case LeafType.RAW_TEX: {
-            // TODO: Should I wrap newlines around this...?
-            return `\n${node.data}\n` || "";
+            // Split into lines, remove the first/last to get
+            // rid of delimiters and join it up again.
+            return node.data
+                ? `\n${node.data.lexeme.split("\n").slice(1,-1).join("\n")}\n`
+                : "";
         }
 
         case LeafType.TEX_INLINE_MATH: {
-            return `$${node.data}$` || "";
+            return node.data
+                ? `$${node.data.lexeme}$${node.data.rightPad}`
+                : "";
         }
 
         case LeafType.TEX_DISPLAY_MATH: {
-            return `$$${node.data}$$` || "";
+            return node.data
+                ? `$$${node.data.lexeme}$$${node.data.rightPad}`
+                : "";
         }
 
         case LeafType.LATEX_INLINE_MATH: {
-            return `\\(${node.data}\\)` || "";
+            return node.data
+                ? `\\(${node.data.lexeme}\\)${node.data.rightPad}`
+                : "";
         }
 
         case LeafType.LATEX_DISPLAY_MATH: {
-            return `\\[${node.data}\\]` || "";
+            return node.data
+                ? `\\[${node.data.lexeme}\\]${node.data.rightPad}`
+                : "";
         }
 
         // TODO: Proper Error handling!!!
@@ -62,11 +75,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            // TODO: Should I really be joining them with " "?
-            // TODO: Need more testing here to make sure
-            // TODO: everything renders properly after joining
-            // TODO: with " ".
-            return "\\textit{" + pieces.join(" ") + "}";
+            return "\\textit{" + pieces.join("") + "}";
         }
 
         case BranchType.BOLD: {
@@ -75,7 +84,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\textbf{" + pieces.join(" ") + "}";
+            return "\\textbf{" + pieces.join("") + "}";
         }
 
         case BranchType.UNDERLINE: {
@@ -84,7 +93,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\underline{" + pieces.join(" ") + "}";
+            return "\\underline{" + pieces.join("") + "}";
         }
 
         case BranchType.STRIKETHROUGH: {
@@ -93,8 +102,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            // TODO: What's the ulem command for strikethrough?
-            return "\\underline{" + pieces.join(" ") + "}";
+            return "\\sout{" + pieces.join("") + "}";
         }
 
         case BranchType.SECTION: {
@@ -103,7 +111,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\section{" + pieces.join(" ") + "}\n";
+            return "\\section{" + pieces.join("") + "}\n\n";
         }
 
         case BranchType.SUBSECTION: {
@@ -112,7 +120,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\subsection{" + pieces.join(" ") + "}\n";
+            return "\\subsection{" + pieces.join("") + "}\n\n";
         }
 
         case BranchType.SUBSUBSECTION: {
@@ -121,7 +129,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\subsubsection{" + pieces.join(" ") + "}\n";
+            return "\\subsubsection{" + pieces.join("") + "}\n\n";
         }
 
         case BranchType.SECTION_STAR: {
@@ -130,7 +138,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\section*{" + pieces.join(" ") + "}\n";
+            return "\\section*{" + pieces.join("") + "}\n\n";
         }
 
         case BranchType.SUBSECTION_STAR: {
@@ -139,7 +147,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\subsection*{" + pieces.join(" ") + "}\n";
+            return "\\subsection*{" + pieces.join("") + "}\n\n";
         }
 
         case BranchType.SUBSUBSECTION_STAR: {
@@ -148,17 +156,17 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\subsubsection*{" + pieces.join(" ") + "}\n";
+            return "\\subsubsection*{" + pieces.join("") + "}\n\n";
         }
 
         case BranchType.LINK: {
-            const ref = node.data || "";
+            const ref = node.data ? node.data.lexeme : "";
             const pieces
                 = node.children
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\href{" + ref + "}{" + pieces.join(" ") + "}"
+            return "\\href{" + ref + "}{" + pieces.join("") + "}"
         }
 
         case BranchType.IMAGE: {
@@ -172,7 +180,7 @@ function renderBranch(node: Node): string {
                 "\\begin{figure}[htp]",
                 "    \\centering",
                 "    \\includegraphics{" + ref + "}",
-                "    \\caption{" + pieces.join(" ") + "}",
+                "    \\caption{" + pieces.join("") + "}",
                 "    \\label{fig:" + ref + "}",
                 "\\end{figure}"
             ];
@@ -189,7 +197,13 @@ function renderBranch(node: Node): string {
                 : [];
 
             const items = pieces.map((p: string) => "\item " + p);
-            const strlist = ["\\begin{itemize}", ...items, "\\end{itemize}"];
+            const strlist = [
+                "",
+                "\\begin{itemize}",
+                ...items,
+                "\\end{itemize}",
+                ""
+            ];
 
             return strlist.join("\n");
         }
@@ -202,9 +216,11 @@ function renderBranch(node: Node): string {
 
             const items = pieces.map((p: string) => "\item " + p);
             const strlist = [
+                "",
                 "\\begin{enumerate}",
                 ...items,
-                "\\end{enumerate}"
+                "\\end{enumerate}",
+                ""
             ];
 
             return strlist.join("\n");
