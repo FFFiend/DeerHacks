@@ -387,11 +387,35 @@ function handleParagraphBoundary(st: State): State {
 
     // Otherwise, we advance on until the next paragraph
     // boundary and recursively parse that as usual.
-    const newSt = advanceWhile(st, (curSt) => !isAtParagraphBoundary(curSt));
+    // In advanceWhile, we advance st once since it's
+    // already sitting at a paragraph boundary, so it
+    // wouldn't move forward otherwise.
+    const newSt = advanceWhile(
+        advance(st),
+        (curSt) => !isAtParagraphBoundary(curSt)
+    );
 
     // Exclude the SOF token and the paragraph boundary token
     // from the sublist to prevent infinite recursion.
-    const subList = subListBetweenStates(st, newSt).slice(1,-1);
+    // However, for `st`, we first need to check if it really
+    // is at a paragraph boundary, because if this function is
+    // being called from a SECTION node's case block, then
+    // there's a chance that `st` isn't at a paragraph boundary,
+    // and there is a meaningful token that we can't slice off.
+    // For example:
+    // "# Hello, World\n**bold**"
+    // Here, The parser will parse the tokens on the heading
+    // line, and then call this handleParagraphBoundary function.
+    // At this point, the state would be on the ** token, which
+    // is NOT a paragraph boundary token. So in this case we can't
+    // slice off the ** token because we will lose the bold part.
+    // TODO: Maybe a better solution to this problem? Maybe I can
+    // TODO: "insert" some kind of End-of-Section token after the
+    // TODO: headings end? And use that as a paragraph boundary
+    // TODO: as well?
+    // TODO: ----------------------------------------------------
+    const start = isAtParagraphBoundary(st) ? 1 : 0;
+    const subList = subListBetweenStates(st, newSt).slice(start,-1);
     const subState = newState(subList);
     const subTree = runParser(subState).tree
 
