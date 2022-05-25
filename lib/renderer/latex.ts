@@ -226,6 +226,19 @@ function renderBranch(node: Node): string {
             return strlist.join("\n");
         }
 
+        case BranchType.PARAGRAPH: {
+            // Deal with empty paragraphs.
+            // TODO: Find a better way to handle this?
+            if (node.children && node.children.length === 0) return "";
+
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
+            return "\\par " + pieces.join("");
+        }
+
         default: {
             return `UNIMPLEMENTED: ${Object.keys(node).includes("children") ? BranchType[node.type] : LeafType[node.type]}`;
         }
