@@ -48,77 +48,15 @@ function runParser(st: State): State {
     const t = curToken(st);
 
     switch (t.type) {
-
-        /**************/
-        /* Leaf Types */
-        /**************/
-
-        // WORD
-        case TokenType.WORD: {
-            const type = LeafType.WORD;
-            // TODO: I'm not sure if joining padding and the
-            // TODO: lexeme together here is the "right" way
-            // TODO: to solve the whitespace-rendering
-            // TODO: problem. Maybe data should be an object
-            // TODO: containing the lexeme and the padding?
-            // TODO: And then for other nodes it could
-            // TODO: possibly contain other stuff too.
-            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
-            const node = createLeaf(st, type, data);
-            return runParser(advance(addNode(st, node)));
-        }
-
-        // AT_DELIM
-        case TokenType.AT_DELIM: {
-            const type = LeafType.AT_DELIM;
-            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
-            const node = createLeaf(st, type, data);
-            return runParser(advance(addNode(st, node)));
-        }
-
-        // MACRO_DEF
-        case TokenType.MACRO_DEF: {
-            const data = extractMacroDefData(t);
-            return runParser(advance(attachMacroData(st, data)));
-        }
-
-        // RAW_TEX
-        case TokenType.HEREDOC_BLOCK: {
-            const type = LeafType.RAW_TEX;
-            // TODO: The scanner SHOULDN'T slice off the lines.
-            // TODO: Keep them in the lexeme, let the renderer
-            // TODO: handle it, and add the delimiter to the
-            // TODO: data object.
-            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
-            const node = createLeaf(st, type, data);
-            return runParser(advance(addNode(st, node)));
-        }
-
-        // TEX_INLINE_MATH
-        case TokenType.TEX_INLINE_MATH: {
-            const type = LeafType.TEX_INLINE_MATH;
-            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
-            const node = createLeaf(st, type, data);
-            return runParser(advance(addNode(st, node)));
-        }
-
-        // TEX_DISPLAY_MATH
-        case TokenType.TEX_DISPLAY_MATH: {
-            const type = LeafType.TEX_DISPLAY_MATH;
-            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
-            const node = createLeaf(st, type, data);
-            return runParser(advance(addNode(st, node)));
-        }
-
-        // LATEX_INLINE_MATH
-        case TokenType.LATEX_INLINE_MATH: {
-            const type = LeafType.LATEX_INLINE_MATH;
-            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
-            const node = createLeaf(st, type, data);
-            return runParser(advance(addNode(st, node)));
-        }
-
-        // LATEX_DISPLAY_MATH
+        // Leaf Types are all basically handled the same way,
+        // there's no special parsing for them.
+        case TokenType.WORD:
+        case TokenType.AT_DELIM:
+        case TokenType.MACRO_DEF:
+        case TokenType.HEREDOC_BLOCK:
+        case TokenType.TEX_INLINE_MATH:
+        case TokenType.TEX_DISPLAY_MATH:
+        case TokenType.LATEX_INLINE_MATH:
         case TokenType.LATEX_DISPLAY_MATH: {
             const type = LeafType.LATEX_DISPLAY_MATH;
             const data = { lexeme: t.lexeme, rightPad: t.rightPad };
@@ -210,18 +148,13 @@ function runParser(st: State): State {
             return runParser(handleLinkOrImage(st, BranchType.IMAGE));
         }
 
-        // BRACKET_PAREN is just treated as a WORD
-        // if it appears outside the context of a
-        // LEFT_BRACKET / BANG_BRACKET
+        // BRACKET_PAREN and RIGHT_PAREN are just
+        // treated like WORD tokens if they appear
+        // outside the context of a LEFT_BRACKET or
+        // BANG_BRACKET (which are handled by
+        // handleLinkOrImage).
+        case TokenType.RIGHT_PAREN:
         case TokenType.BRACKET_PAREN: {
-            const type = LeafType.WORD;
-            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
-            const node = createLeaf(st, type, data);
-            return runParser(advance(addNode(st, node)));
-        }
-
-        // RIGHT_PAREN is treated the same as BRACKET_PAREN.
-        case TokenType.RIGHT_PAREN: {
             const type = LeafType.WORD;
             const data = { lexeme: t.lexeme, rightPad: t.rightPad };
             const node = createLeaf(st, type, data);
@@ -238,17 +171,14 @@ function runParser(st: State): State {
             return runParser(handleList(st, BranchType.ENUMERATE));
         }
 
-        // PARAGRAPH
-        case TokenType.SOF: {
-            return runParser(handleParagraphBoundary(st));
-        }
-
-        // PARAGRAPH
+        // SOF and EMPTY_ROW are both just paragraph
+        // boundaries.
+        case TokenType.SOF:
         case TokenType.EMPTY_ROW: {
             return runParser(handleParagraphBoundary(st));
         }
 
-        // EOF, just return the state.
+        // For EOF we just return the state.
         case TokenType.EOF: {
             return st;
         }
