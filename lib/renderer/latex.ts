@@ -262,9 +262,9 @@ function renderNode(node: Node): string {
 }
 
 // Converts AST to LaTeX output string.
-export function renderLaTeX(ast: AST): string {
+export function render(ast: AST): string {
     // The AST is a list of nodes so we map them to
     // their rendered strings and join them.
     const pieces = ast.map((n: Node) => renderNode(n));
-    return pieces.join(" ");
+    return pieces.join("");
 }
