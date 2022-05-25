@@ -64,21 +64,25 @@ function runParser(st: State): State {
             return runParser(advance(addNode(st, node)));
         }
 
-        /****************/
-        /* Branch Types */
-        /****************/
-
         // ITALIC
         case TokenType.STAR: {
             return runParser(
-                handleEnclosedNode(st, TokenType.STAR, BranchType.ITALIC)
+                handleEnclosedNode(
+                    st,
+                    TokenType.STAR,
+                    BranchType.ITALIC
+                )
             );
         }
 
         // BOLD
         case TokenType.DOUBLE_STAR: {
             return runParser(
-                handleEnclosedNode(st, TokenType.DOUBLE_STAR, BranchType.BOLD)
+                handleEnclosedNode(
+                    st,
+                    TokenType.DOUBLE_STAR,
+                    BranchType.BOLD
+                )
             );
         }
 
