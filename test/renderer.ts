@@ -1,7 +1,7 @@
-import { renderLaTeX } from "../lib/renderer/latex.ts";
-import { parse } from "../lib/parser/parser.ts";
-import { lex } from "../lib/lexer/lexer.ts";
+import { render } from "../lib/renderer/latex.ts";
+import { happyParse } from "../lib/parser/parser.ts";
+import { happyLex } from "../lib/lexer/lexer.ts";
 
-const sample = "Some non-bold and **some bold** text."
-
-console.log("%c'" + renderLaTeX(parse(lex(sample))) + "'", "color: green");
+const sample = Deno.readTextFileSync("./test/sample.txt")
+const rendered = render(happyParse(happyLex(sample)));
+console.log("%c" + rendered + "\n", "color: green");

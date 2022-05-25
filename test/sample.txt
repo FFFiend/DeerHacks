@@ -1,0 +1,11 @@
+# Hello, World!
+
+**Bold** and ~~strikethrough~~.
+
+- A list
+- With items
+- Inside it.
+
+TEX <<< EOF
+\onehalfspacing
+EOF
