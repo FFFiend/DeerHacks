@@ -220,6 +220,15 @@ function renderBranch(node: Node): string {
             return strlist.join("\n");
         }
 
+        case BranchType.LIST_ITEM: {
+            const pieces
+                = node.children
+                ? node.children.map((n: Node) => renderNode(n))
+                : [];
+
+            return pieces.join("");
+        }
+
         case BranchType.PARAGRAPH: {
             // Deal with empty paragraphs.
             // TODO: Find a better way to handle this?
