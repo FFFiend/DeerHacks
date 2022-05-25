@@ -308,20 +308,27 @@ function handleListItems(st: State, isOrderedList: boolean): State {
 
     // Currently we know curToken(st) is UL_ITEM or OL_ITEM,
     // since that's why this function was called. So we advance
-    // once on st before calling advanceWhile on it.
+    // once on st before calling advanceWhile on it, otherwise
+    // advanceWhile will get stuck.
+    // TODO: advanceUntil
     const newSt = advanceWhile(advance(st), (curSt) => {
-        // Advance as long as we aren't at a boundary, start of
-        // next list item or end of file.
+        // Advance until the next list item starts (or we run
+        // out of tokens, but that's handled by advanceWhile
+        // under the hood).
         const isAtNextItem = curToken(curSt).type === tokenType;
-        return !isAtParagraphBoundary(curSt) && !isAtNextItem;
+        return !isAtNextItem;
     });
 
     // We slice off the list item token that st is sitting on,
-    // and the boundary that newSt ends on (a list item token or
-    // empty row or section etc.) before parsing the sublist
-    // (since we don't need them + the list item tokens would
-    // result in infinite recursion).
-    const subList = subListBetweenStates(st, newSt).slice(1,-1);
+    // and the NEXT list item token that newSt ends on before
+    // parsing the sublist (since we don't need them, plus
+    // the list item tokens would result in infinite recursion).
+    // However, we do need to check in case newSt ended because
+    // of running out of tokens, in which case slicing the last
+    // token would actually be removing a token that's part of
+    // the list item's contents.
+    const end = hasTokensLeft(newSt) ? -1 : newSt.tokens.length;
+    const subList = subListBetweenStates(st, newSt).slice(1, end);
     const subState = newState(subList);
     const subTree = runParser(subState).tree;
 
