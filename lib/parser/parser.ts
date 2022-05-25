@@ -363,6 +363,13 @@ function handleList(st: State, nodeType: BranchType): State {
 }
 
 function handleParagraphBoundary(st: State): State {
+    // TODO: While this does fix bugs with st sometimes
+    // TODO: running out of tokens and this function being
+    // TODO: called which leads to errors with createBranch
+    // TODO: since there's no tokens left, I SHOULDN'T be
+    // TODO: having to do tokenLeft checks here, they should
+    // TODO: be handled properly by the helper functions.
+    if (!hasTokensLeft(st)) return st;
     // If the next token is a section/heading, we DON'T
     // start a new paragraph, since sections are not part
     // of paragraphs. We just advance and move on from SOF.
