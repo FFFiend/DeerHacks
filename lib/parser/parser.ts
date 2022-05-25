@@ -398,9 +398,24 @@ function handleParagraphBoundary(st: State): State {
     const type = BranchType.PARAGRAPH;
     const data = null;
     const children = subTree;
-    const node = createBranch(st, type, data, children);
 
-    return advance(addNode(newSt, node));
+    // If the paragraph isn't empty, we create and add
+    // the node, otherwise we just return the state. This
+    // should properly handle extra paragraphs at the end
+    // of sections and end of files.
+    if (children.length > 0) {
+        const node = createBranch(st, type, data, children);
+        // NOTE: We do NOT advance here. We are currently at the
+        // NOTE: *next* paragraph boundary, and we can't skip over
+        // NOTE: that, so that the parser can see it and start a
+        // NOTE: new paragraph. Otherwise, the parser will miss the
+        // NOTE: boundary and everything after this will not be
+        // NOTE: inside a paragraph as it should be.
+        return addNode(newSt, node);
+    } else {
+        return newSt;
+    }
+
 }
 
 // Handles stuff enclosed within delimiting tokens,
