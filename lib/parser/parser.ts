@@ -49,19 +49,34 @@ function runParser(st: State): State {
 
     switch (t.type) {
         // Leaf Types are all basically handled the same way,
-        // there's no special parsing for them.
+        // there's no special parsing for them, EXCEPT for
+        // MACRO_DEF which doesn't add any nodes to the AST,
+        // just the macro def to the state's list of macroDefs.
         case TokenType.WORD:
+            return runParser(handleLeaf(st, LeafType.WORD));
+
         case TokenType.AT_DELIM:
-        case TokenType.MACRO_DEF:
+            return runParser(handleLeaf(st, LeafType.AT_DELIM));
+
         case TokenType.HEREDOC_BLOCK:
+            return runParser(handleLeaf(st, LeafType.RAW_TEX));
+
         case TokenType.TEX_INLINE_MATH:
+            return runParser(handleLeaf(st, LeafType.TEX_INLINE_MATH));
+
         case TokenType.TEX_DISPLAY_MATH:
+            return runParser(handleLeaf(st, LeafType.TEX_DISPLAY_MATH));
+
         case TokenType.LATEX_INLINE_MATH:
-        case TokenType.LATEX_DISPLAY_MATH: {
-            const type = LeafType.LATEX_DISPLAY_MATH;
-            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
-            const node = createLeaf(st, type, data);
-            return runParser(advance(addNode(st, node)));
+            return runParser(handleLeaf(st, LeafType.LATEX_INLINE_MATH));
+
+        case TokenType.LATEX_DISPLAY_MATH:
+            return runParser(handleLeaf(st, LeafType.LATEX_DISPLAY_MATH));
+
+        // MACRO_DEF
+        case TokenType.MACRO_DEF: {
+            const data = extractMacroDefData(t);
+            return runParser(advance(attachMacroData(st, data)));
         }
 
         // ITALIC
@@ -217,6 +232,13 @@ function runParser(st: State): State {
             return runParser(advance(attachError(st, err)));
         }
     }
+}
+
+function handleLeaf(st: State, type: LeafType): State {
+    const t = curToken(st);
+    const data = { lexeme: t.lexeme, rightPad: t.rightPad };
+    const node = createLeaf(st, type, data);
+    return advance(addNode(st, node));
 }
 
 // TODO: Handle errors like empty macro name, empty
