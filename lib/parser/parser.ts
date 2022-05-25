@@ -108,38 +108,63 @@ function runParser(st: State): State {
             );
         }
 
-        // TODO: After handling a section node, also check
-        // TODO: if the next node is another section node or
-        // TODO: not. If not, then start a new paragraph node.
-        //
+        // Each section is also a paragraph boundary, so
+        // we handle it as a row node to parse the section
+        // itself, and then handle it as a paragraph
+        // boundary.
+
         // SECTION
         case TokenType.HASH: {
-            return runParser(handleRowNode(st, BranchType.SECTION));
+            return runParser(
+                handleParagraphBoundary(
+                    handleRowNode(st, BranchType.SECTION)
+                )
+            );
         }
 
         // SUBSECTION
         case TokenType.DOUBLE_HASH: {
-            return runParser(handleRowNode(st, BranchType.SUBSECTION));
+            return runParser(
+                handleParagraphBoundary(
+                    handleRowNode(st, BranchType.SUBSECTION)
+                )
+            );
         }
 
         // SUBSUBSECTION
         case TokenType.TRIPLE_HASH: {
-            return runParser(handleRowNode(st, BranchType.SUBSUBSECTION));
+            return runParser(
+                handleParagraphBoundary(
+                    handleRowNode(st, BranchType.SUBSUBSECTION)
+                )
+            );
         }
 
         // SECTION_STAR
         case TokenType.HASHSTAR: {
-            return runParser(handleRowNode(st, BranchType.SECTION_STAR));
+            return runParser(
+                handleParagraphBoundary(
+                    handleRowNode(st, BranchType.SECTION_STAR)
+                )
+            );
         }
 
         // SUBSECTION_STAR
         case TokenType.DOUBLE_HASHSTAR: {
-            return runParser(handleRowNode(st, BranchType.SUBSECTION_STAR));
+            return runParser(
+                handleParagraphBoundary(
+                    handleRowNode(st, BranchType.SUBSECTION_STAR)
+                )
+            );
         }
 
         // SUBSUBSECTION_STAR
         case TokenType.TRIPLE_HASHSTAR: {
-            return runParser(handleRowNode(st, BranchType.SUBSUBSECTION_STAR));
+            return runParser(
+                handleParagraphBoundary(
+                    handleRowNode(st, BranchType.SUBSUBSECTION_STAR)
+                )
+            );
         }
 
         // LINK
