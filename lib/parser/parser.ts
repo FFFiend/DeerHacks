@@ -457,7 +457,12 @@ function handleRowNode(st: State, nodeType: BranchType): State {
     // Advance till the end of the row (i.e we see a token
     // that isn't on the same row as the current st's token).
     const newSt = advanceWhile(st, (curSt) => {
-        return lookahead(curSt)[0].row == curToken(st).row;
+        // Get the lookahead list (it's a list not a token object!)
+        const la = lookahead(curSt);
+        // Need to do a bounds check first - the list would be
+        // empty if we've consumed all the tokens, which would
+        // raise a range error with la[0].
+        return la.length > 0 && la[0].row == curToken(st).row;
     });
 
     // Get the tokens between the states.
