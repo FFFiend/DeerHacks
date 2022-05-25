@@ -266,5 +266,6 @@ export function render(ast: AST): string {
     // The AST is a list of nodes so we map them to
     // their rendered strings and join them.
     const pieces = ast.map((n: Node) => renderNode(n));
-    return pieces.join("");
+    // Also strip extra whitespace at the ends.
+    return pieces.join("").trim();
 }

@@ -590,7 +590,7 @@ function handleWord(st: State): State {
 * @returns {State} The final state after lexing the entire source string.
 */
 export function lex(src: string): State {
-    const st = newState(src);
+    const st = newState(src.trim());
 
     // We insert the SOF token first before running the lexer.
     const sofType = TokenType.SOF;
