@@ -111,7 +111,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\section{" + pieces.join("") + "}\n\n";
+            return "\\section{" + pieces.join("") + "}\n";
         }
 
         case BranchType.SUBSECTION: {
@@ -120,7 +120,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\subsection{" + pieces.join("") + "}\n\n";
+            return "\\subsection{" + pieces.join("") + "}\n";
         }
 
         case BranchType.SUBSUBSECTION: {
@@ -129,7 +129,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\subsubsection{" + pieces.join("") + "}\n\n";
+            return "\\subsubsection{" + pieces.join("") + "}\n";
         }
 
         case BranchType.SECTION_STAR: {
@@ -138,7 +138,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\section*{" + pieces.join("") + "}\n\n";
+            return "\\section*{" + pieces.join("") + "}\n";
         }
 
         case BranchType.SUBSECTION_STAR: {
@@ -147,7 +147,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\subsection*{" + pieces.join("") + "}\n\n";
+            return "\\subsection*{" + pieces.join("") + "}\n";
         }
 
         case BranchType.SUBSUBSECTION_STAR: {
@@ -156,7 +156,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\subsubsection*{" + pieces.join("") + "}\n\n";
+            return "\\subsubsection*{" + pieces.join("") + "}\n";
         }
 
         case BranchType.LINK: {
@@ -178,18 +178,16 @@ function renderBranch(node: Node): string {
 
             const strlist = [
                 "\\begin{figure}[htp]",
-                "    \\centering",
-                "    \\includegraphics{" + ref + "}",
-                "    \\caption{" + pieces.join("") + "}",
-                "    \\label{fig:" + ref + "}",
+                "\t\\centering",
+                "\t\\includegraphics{" + ref + "}",
+                "\t\\caption{" + pieces.join("") + "}",
+                "\t\\label{fig:" + ref + "}",
                 "\\end{figure}"
             ];
 
             return strlist.join("\n");
         }
 
-        // TODO: No idea if the whitespace between them is consistent
-        // TODO: or not, needs testing.
         case BranchType.ITEMIZE: {
             const pieces
                 = node.children
@@ -198,11 +196,9 @@ function renderBranch(node: Node): string {
 
             const items = pieces.map((p: string) => "\item " + p);
             const strlist = [
-                "",
                 "\\begin{itemize}",
                 ...items,
                 "\\end{itemize}",
-                ""
             ];
 
             return strlist.join("\n");
@@ -216,11 +212,9 @@ function renderBranch(node: Node): string {
 
             const items = pieces.map((p: string) => "\item " + p);
             const strlist = [
-                "",
                 "\\begin{enumerate}",
                 ...items,
                 "\\end{enumerate}",
-                ""
             ];
 
             return strlist.join("\n");
@@ -236,7 +230,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\par " + pieces.join("");
+            return "\n\\par " + pieces.join("") + "\n";
         }
 
         default: {
