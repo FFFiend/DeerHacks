@@ -12,6 +12,7 @@ export class UnrecognizedCharError extends Error {
     }
 
     public print(): void {
+        console.log("%cUNIMPLEMENTED!", "color: red");
     }
 }
 
