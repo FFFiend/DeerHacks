@@ -4,6 +4,8 @@ import {
     UnexpectedCharError
 } from "./errors.ts";
 
+import { State } from "./state.ts";
+
 // Token types
 export enum TokenType {
     // Plain text word.
@@ -13,7 +15,7 @@ export enum TokenType {
     // Markup macro definition.
     MACRO_DEF,
     // 'TEX <<< ...' and '...'.
-    HEREDOC_BLOCK,
+    HEREDOC,
 
     // TeX & LaTeX Math Delimiters.
     TEX_INLINE_MATH, TEX_DISPLAY_MATH,
@@ -53,18 +55,23 @@ export type Token = {
     row: number
 }
 
+// Type alias for State
+export type LexerState = State;
+
+// Predicate function type used for advancing state.
+export type StatePredicate = (st: State) => boolean;
+
+// The 'location' of the state at a specific point.
+export type Snapshot = {
+    source: string,
+    position: number;
+    col: number;
+    row: number;
+}
+
 // Just two types of errors for the lexer.
 export type LexerError
     = UnrecognizedCharError
     | UnclosedSequenceError
     | UnexpectedCharError;
 
-// Keep track of scanner state.
-export type LexerState = {
-    source: string,
-    tokens: Token[],
-    position: number,
-    col: number,
-    row: number,
-    errors: LexerError[]
-}
