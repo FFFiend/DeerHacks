@@ -6,6 +6,8 @@ import {
 } from "./errors.ts";
 
 import {
+    or,
+    and,
     behind,
     createToken,
     isEscapableChar,
@@ -153,21 +155,32 @@ export function handleHeredoc(st: State): void {
         return;
     }
 
-    // Next, advance until we see the delimiter on its own
-    // on a new line (i.e surrounded by \n). Then advance
-    // once more to get that first \n, and then capture the
-    // substring as the contents.
+    // Get the delimiter from the regex match.
     const delimiter = match[1];
+
+    // We now advance until we see the delimiter on its own
+    // on a new line (i.e surrounded by \n, or at the end
+    // of the file, which also counts as being on its own
+    // line).
+    const atEndOfFile = (st: State) => !st.hasSourceLeft();
+    const behindDelimAndNewline = behind("\n" + delimiter + "\n");
+    const behindDelimAndEOF = and(behind("\n" + delimiter), atEndOfFile);
+    const advanceFn = or(behindDelimAndEOF, behindDelimAndNewline);
+
     const contents = st
         .markPosition()
-        .advanceUntil(behind("\n" + delimiter + "\n"))
+        .advanceUntil(advanceFn)
+        // Advance once more so we can also capture the \n
+        // that comes BEFORE the delimiter (not the end,
+        // because it might not exist if the delimiter
+        // is at the end of the file!)
         .advance()
         .captureMarkedSubstring();
 
     // Check that we really did end before the delimiter (it's
     // possible that the state stopped advancing due to running
-    // out of tokens).
-    if (st.lookahead(delimiter.length + 1) === (delimiter + "\n")) {
+    // out of tokens, which is an error).
+    if (st.lookahead(delimiter.length) !== delimiter) {
         const hint = ([
             "A delimiting identifier is needed to mark the",
             "beginning and end of the raw tex code in the",
