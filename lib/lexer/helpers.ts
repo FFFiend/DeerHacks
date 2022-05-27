@@ -63,7 +63,11 @@ export function constrainList<T>(lst: T[], n: number = 50): T[] {
     }
 }
 
-export function tokenToString(token: Token, color: Colorer): string {
+export function tokenToString(token: Token, colorer?: Colorer): string {
+    const color = colorer !== undefined
+                ? colorer
+                : (str: string, _color: string) => str;
+
     const r = (str: string) => color(str, "red");
     const g = (str: string) => color(str, "green");
     const b = (str: string) => color(str, "blue");
