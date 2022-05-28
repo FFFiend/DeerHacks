@@ -6,5 +6,9 @@ console.time("Took");
 const rendered = render(happyParse(sample));
 console.timeEnd("Took");
 
-console.log("Output file will be written to ./test/output.txt");
-Deno.writeTextFileSync("./test/output.txt", rendered);
+if (Deno.args.includes("latex")) {
+    console.log("'" + rendered + "'");
+} else {
+    console.log("Output file will be written to ./test/output.txt");
+    Deno.writeTextFileSync("./test/output.txt", rendered);
+}
