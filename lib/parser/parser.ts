@@ -1,256 +1,79 @@
-// Parse tokens into AST.
-import { Token, TokenType } from "../lexer/types.ts";
+import { lex } from "../lexer/lexer.ts";
+//import { tokenToString } from "../lexer/helpers.ts";
+import { Node } from "./node.ts";
+import { State } from "./state.ts";
 import { UnrecognizedTokenError } from "./errors.ts";
+import { Token, TokenType, LexerState } from "../lexer/types.ts";
+
+import {
+    isRowNode,
+    isListNode,
+    isLinkOrImage,
+    printNode
+} from "./helpers.ts";
 
 import {
     AST,
-    ParserState as State,
+    NodeType,
     LeafType,
     BranchType,
-    MacroDefData
+    MacroDefData,
+    LinkImageData,
+    EnclosedNodeData,
 } from "./types.ts";
 
-import {
-    addNode,
-    advance,
-    curToken,
-    newState,
-    lookahead,
-    createLeaf,
-    attachError,
-    advanceWhile,
-    createBranch,
-    hasTokensLeft,
-    attachMacroData,
-    subListBetweenStates
-} from "./helpers.ts";
-
-// TODO: Javascript actually just creates shallow copies
-// TODO: pretty much everywhere :(
-// TODO: So no need to go through all the hassle of shallow
-// TODO: copies, just assign stuff normally.
-// TODO: I guess it doesn't matter if I mutate the original
-// TODO: state object, then...
-
-// TODO: Need to decide what starts/ends a paragraph. There's
-// TODO: no markers for paras besides the EMPTY_ROW token,
-// TODO: so i need to handle that carefully. Maybe, headings
-// TODO: and EMPTY_ROW end a para, and everything else starts
-// TODO: a new para or continues the previous.
-
-// TODO: Make sure all tokens are handled. Also add the error
-// TODO: for the default case.
-
-function runParser(st: State): State {
-    // End when no tokens left, just like lexer.
-    if (!hasTokensLeft(st)) return st;
-
-    const t = curToken(st);
-
-    switch (t.type) {
-        // Leaf Types are all basically handled the same way,
-        // there's no special parsing for them, EXCEPT for
-        // MACRO_DEF which doesn't add any nodes to the AST,
-        // just the macro def to the state's list of macroDefs.
-        case TokenType.WORD:
-            return runParser(handleLeaf(st, LeafType.WORD));
-
-        case TokenType.AT_DELIM:
-            return runParser(handleLeaf(st, LeafType.AT_DELIM));
-
-        case TokenType.HEREDOC_BLOCK:
-            return runParser(handleLeaf(st, LeafType.RAW_TEX));
-
-        case TokenType.TEX_INLINE_MATH:
-            return runParser(handleLeaf(st, LeafType.TEX_INLINE_MATH));
-
-        case TokenType.TEX_DISPLAY_MATH:
-            return runParser(handleLeaf(st, LeafType.TEX_DISPLAY_MATH));
-
-        case TokenType.LATEX_INLINE_MATH:
-            return runParser(handleLeaf(st, LeafType.LATEX_INLINE_MATH));
-
-        case TokenType.LATEX_DISPLAY_MATH:
-            return runParser(handleLeaf(st, LeafType.LATEX_DISPLAY_MATH));
-
-        // MACRO_DEF
-        case TokenType.MACRO_DEF: {
-            const data = extractMacroDefData(t);
-            return runParser(advance(attachMacroData(st, data)));
-        }
-
-        // ITALIC
-        case TokenType.STAR: {
-            return runParser(
-                handleEnclosedNode(
-                    st,
-                    TokenType.STAR,
-                    BranchType.ITALIC
-                )
-            );
-        }
-
-        // BOLD
-        case TokenType.DOUBLE_STAR: {
-            return runParser(
-                handleEnclosedNode(
-                    st,
-                    TokenType.DOUBLE_STAR,
-                    BranchType.BOLD
-                )
-            );
-        }
-
-        // UNDERLINE
-        case TokenType.DOUBLE_UNDERSCORE: {
-            return runParser(
-                handleEnclosedNode(
-                    st,
-                    TokenType.DOUBLE_UNDERSCORE,
-                    BranchType.UNDERLINE
-                )
-            );
-        }
-
-        // STRIKETHROUGH
-        case TokenType.DOUBLE_TILDE: {
-            return runParser(
-                handleEnclosedNode(
-                    st,
-                    TokenType.DOUBLE_TILDE,
-                    BranchType.STRIKETHROUGH
-                )
-            );
-        }
-
-        // Each section is also a paragraph boundary, so
-        // we handle it as a row node to parse the section
-        // itself, and then handle it as a paragraph
-        // boundary.
-
-        // SECTION
-        case TokenType.HASH: {
-            return runParser(
-                handleParagraphBoundary(
-                    handleRowNode(st, BranchType.SECTION)
-                )
-            );
-        }
-
-        // SUBSECTION
-        case TokenType.DOUBLE_HASH: {
-            return runParser(
-                handleParagraphBoundary(
-                    handleRowNode(st, BranchType.SUBSECTION)
-                )
-            );
-        }
-
-        // SUBSUBSECTION
-        case TokenType.TRIPLE_HASH: {
-            return runParser(
-                handleParagraphBoundary(
-                    handleRowNode(st, BranchType.SUBSUBSECTION)
-                )
-            );
-        }
-
-        // SECTION_STAR
-        case TokenType.HASHSTAR: {
-            return runParser(
-                handleParagraphBoundary(
-                    handleRowNode(st, BranchType.SECTION_STAR)
-                )
-            );
-        }
-
-        // SUBSECTION_STAR
-        case TokenType.DOUBLE_HASHSTAR: {
-            return runParser(
-                handleParagraphBoundary(
-                    handleRowNode(st, BranchType.SUBSECTION_STAR)
-                )
-            );
-        }
-
-        // SUBSUBSECTION_STAR
-        case TokenType.TRIPLE_HASHSTAR: {
-            return runParser(
-                handleParagraphBoundary(
-                    handleRowNode(st, BranchType.SUBSUBSECTION_STAR)
-                )
-            );
-        }
-
-        // LINK
-        case TokenType.LEFT_BRACKET: {
-            return runParser(handleLinkOrImage(st, BranchType.LINK));
-        }
-
-        // IMAGE
-        case TokenType.BANG_BRACKET: {
-            return runParser(handleLinkOrImage(st, BranchType.IMAGE));
-        }
-
-        // BRACKET_PAREN and RIGHT_PAREN are just
-        // treated like WORD tokens if they appear
-        // outside the context of a LEFT_BRACKET or
-        // BANG_BRACKET (which are handled by
-        // handleLinkOrImage).
-        case TokenType.RIGHT_PAREN:
-        case TokenType.BRACKET_PAREN: {
-            const type = LeafType.WORD;
-            const data = { lexeme: t.lexeme, rightPad: t.rightPad };
-            const node = createLeaf(st, type, data);
-            return runParser(advance(addNode(st, node)));
-        }
-
-        // ITEMIZE
-        case TokenType.UL_ITEM: {
-            return runParser(handleList(st, BranchType.ITEMIZE));
-        }
-
-        // ENUMERATE
-        case TokenType.OL_ITEM: {
-            return runParser(handleList(st, BranchType.ENUMERATE));
-        }
-
-        // SOF and EMPTY_ROW are both just paragraph
-        // boundaries.
-        case TokenType.SOF:
-        case TokenType.EMPTY_ROW: {
-            return runParser(handleParagraphBoundary(st));
-        }
-
-        // For EOF we just return the state.
-        case TokenType.EOF: {
-            return st;
-        }
-
-        default: {
-            const err = new UnrecognizedTokenError(st);
-            return runParser(advance(attachError(st, err)));
-        }
-    }
+function handleLeaf(st: State, type: NodeType): void {
+    const token = st.curToken();
+    const node = new Node(st, type, true);
+    node.setData({ lexeme: token.lexeme, rightPad: token.rightPad });
+    st.addLeaf(node).advance();
 }
 
-function handleLeaf(st: State, type: LeafType): State {
-    const t = curToken(st);
-    const data = { lexeme: t.lexeme, rightPad: t.rightPad };
-    const node = createLeaf(st, type, data);
-    return advance(addNode(st, node));
+function handleEnclosed(st: State, type: NodeType): void {
+    const branch = st.getCurrentStackBranch();
+
+    // If the current branch is already of the same node type,
+    // it means the current token is the closing one, in which
+    // case we pop the branch from the stack and add it to the
+    // AST. Otherwise, it means the token is the opening one,
+    // so we create the branch node and push it to the stack.
+    if (branch !== null && branch.type === type) {
+        // Before popping, we need to update it's data.
+        const data = branch.getData() as EnclosedNodeData;
+        data.rightPad = st.curToken().rightPad;
+        branch.setData(data);
+        st.popBranch();
+    } else {
+        const node = new Node(st, type)
+
+        // Since we are at the opening token, we need to add the
+        // token's rightPad as leftPad to the node's data.
+        const data = {
+            leftPad: st.curToken().rightPad,
+            rightPad: "",
+            lexeme: ""
+        };
+
+        node.setData(data);
+        st.pushBranch(node);
+    }
+
+    // Lastly, we advance to move past the token.
+    st.advance();
 }
 
 // TODO: Handle errors like empty macro name, empty
 // TODO: param names. In these functions, don't do
 // TODO: anything, but later in the parser check for
 // TODO: these and attach an error.
+// TODO: ---------------------------------------------
 function extractMacroDefData(t: Token): MacroDefData {
     const re = /macro\s+(.*)\s+=\s+\{(.*)\}/;
     // TODO: Am I supposed to use match here?
     // TODO: Check that the regex and match works
     // TODO: properly. Does it even return an
     // TODO: array?
+    // TODO: -----------------------------------
     const match = t.lexeme.match(re);
     const [head, body] = match != null ? match : [];
     const name = extractMacroName(head);
@@ -263,7 +86,6 @@ function extractMacroDefData(t: Token): MacroDefData {
     };
 }
 
-// TODO: Testing. Maybe move to helpers?
 function extractMacroName(head: string | undefined): string {
     if (typeof(head) == "undefined") return "";
 
@@ -274,7 +96,6 @@ function extractMacroName(head: string | undefined): string {
     return result;
 }
 
-// TODO: Testing. Maybe move to helpers?
 function extractMacroParams(head: string | undefined): string[] {
     if (typeof(head) == "undefined") return [];
 
@@ -284,324 +105,318 @@ function extractMacroParams(head: string | undefined): string[] {
     return matches || [];
 }
 
-// Check if the given token is a section token i.e
-// HASH and its variants.
-function isAtSectionToken(st: State): boolean {
-    const t = curToken(st).type;
-    return t == TokenType.HASH ||
-           t == TokenType.DOUBLE_HASH ||
-           t == TokenType.TRIPLE_HASH ||
-           t == TokenType.HASHSTAR ||
-           t == TokenType.DOUBLE_HASHSTAR ||
-           t == TokenType.TRIPLE_HASHSTAR;
+// Handles the start of a row node (section/heading).
+function handleRowStart(st: State, type: NodeType): void {
+    // Before the row starts, we need to end the
+    // previous paragraph.
+    handleParEnd(st);
+    // Here, we only push the node onto the stack.
+    // Popping the branch is done by handleRowEnd.
+    st.pushBranch(new Node(st, type)).advance();
 }
 
-function isAtParagraphBoundary(st: State): boolean {
-    const emptyRow = curToken(st).type == TokenType.EMPTY_ROW;
-    const eof      = curToken(st).type == TokenType.EOF;
-    return isAtSectionToken(st) || emptyRow || eof;
+// Handles the end of a row (i.e when we detect that
+// we've moved to a new line).
+function handleRowEnd(st: State): void {
+    // We force the stack into a row node. For correctly
+    // formatted markup, this will just pop the top node
+    // from the stack (which will be a row node) and add
+    // it to the stack. But for ill-formatted markup, it
+    // will force extra branches on top of the row branch
+    // into WORD nodes and push them into the row node.
+    // This is to handle stuff like:
+    //     # Hello, **World!
+    // where the bold formatting isn't closed properly.
+    // Then we can safely pop the branch knowing that it's
+    // a row node. Collapse will do nothing if there are
+    // no row nodes in the stack.
+    const branch = st.collapseStackToRowNode().getCurrentStackBranch();
+
+    // We need to make sure the branch really is a row
+    // node, because it's possible there was no row node
+    // in the stack (i.e when we move to a new line inside
+    // a paragraph).
+    if (branch !== null && isRowNode(branch)) {
+        st.popBranch();
+        // After handling the row, we also handle the paragraph
+        // boundary since we've reached the end of the row, which
+        // means the start of a new paragraph.
+        handleParStart(st);
+    }
 }
 
-// Returns state with list item nodes.
-function handleListItems(st: State, isOrderedList: boolean): State {
-    const tokenType = isOrderedList ? TokenType.OL_ITEM : TokenType.UL_ITEM;
+function handleParStart(st: State): void {
+    st.pushBranch(new Node(st, BranchType.PARAGRAPH));
+}
 
-    // Currently we know curToken(st) is UL_ITEM or OL_ITEM,
-    // since that's why this function was called. So we advance
-    // once on st before calling advanceWhile on it, otherwise
-    // advanceWhile will get stuck.
-    // TODO: advanceUntil
-    const newSt = advanceWhile(advance(st), (curSt) => {
-        // Advance until the next list item starts (or we run
-        // out of tokens, but that's handled by advanceWhile
-        // under the hood).
-        const isAtNextItem = curToken(curSt).type === tokenType;
-        return !isAtNextItem;
-    });
+function handleParEnd(st: State): void {
+    // The end of paragraphs is also where lists end,
+    // so we handle that first.
+    handleListEnd(st);
 
-    // We slice off the list item token that st is sitting on,
-    // and the NEXT list item token that newSt ends on before
-    // parsing the sublist (since we don't need them, plus
-    // the list item tokens would result in infinite recursion).
-    // However, we do need to check in case newSt ended because
-    // of running out of tokens, in which case slicing the last
-    // token would actually be removing a token that's part of
-    // the list item's contents.
-    const end = hasTokensLeft(newSt) ? -1 : newSt.tokens.length;
-    const subList = subListBetweenStates(st, newSt).slice(1, end);
-    const subState = newState(subList);
-    const subTree = runParser(subState).tree;
+    // We collapse and then immediately pop the branch
+    // because collapsing to a paragraph node *always*
+    // results in the stack containing just one node,
+    // which is the paragraph node that we then pop.
+    // We collapse everything to a single paragraph node
+    // in the stack because we want to make sure paragraphs
+    // are always a top-level node.
+    st.collapseStackToParNode().popBranch();
+}
 
-    const type = BranchType.LIST_ITEM;
-    const children = subTree;
-    const node = createBranch(st, type, null, children);
-
-    const finalState = addNode(newSt, node);
-
-    // If we stopped at the start of a new list item, recurse and
-    // parse that too. Also need to do a tokens left check in case
-    // we ran out in the advanceWhile.
-    if (hasTokensLeft(newSt) && curToken(newSt).type === tokenType) {
-        return handleListItems(finalState, isOrderedList);
+function handleLinkOrImageStart(st: State, type: BranchType): void {
+    // We don't allow nested link/images, so if there already
+    // IS a link/image in the stack, then we handle the current
+    // token as a WORD. Note we don't allow nesting links in links
+    // or images in images, but it is possible to nest a link in
+    // an image or an image in a link (though LaTeX might not
+    // accept that!)
+    if (st.stackSomeFromBottom((n: Node) => n.type === type)) {
+        handleLeaf(st, LeafType.WORD);
     } else {
-        // Otherwise if we stopped at a boundary, we return
-        // the final state.
-        return finalState;
+        const node = new Node(st, type);
+        node.setData({
+            leftPad: st.curToken().rightPad,
+            lexeme: "",
+            rightPad: ""
+        });
+
+        st.pushBranch(node);
     }
 }
 
-function handleList(st: State, nodeType: BranchType): State {
-    // Get to the list boundary (which is the same as a paragraph
-    // boundary in our case).
-    const newSt = advanceWhile(st, (curSt) => {
-        return !isAtParagraphBoundary(curSt);
-    });
+function handleLinkOrImageEnd(st: State): void {
+    // We need to make sure the stack has a link/image
+    // node in the first place.
+    if (st.stackSomeFromTop(isLinkOrImage)) {
+        // If it does, we collapse the stack to link/image.
+        st.collapseStackToLinkOrImage();
 
-    const isOrderedList = nodeType === BranchType.ENUMERATE;
+        // And then also parse the next two tokens since we
+        // can expect them to be a single WORD (the ref) and
+        // a RIGHT_PAREN token.
+        const [ref, paren] = st.lookahead(2);
+        const areDefined = ref !== undefined && paren !== undefined;
+        const validRef = ref.type === TokenType.WORD;
+        const validParen = paren.type === TokenType.RIGHT_PAREN;
 
-    const subList = subListBetweenStates(st, newSt);
-    const subState = newState(subList);
-    const subTree = handleListItems(subState, isOrderedList).tree;
-
-    const type = nodeType;
-    const children = subTree;
-    const node = createBranch(st, type, null, children);
-    return addNode(newSt, node);
-}
-
-function handleParagraphBoundary(st: State): State {
-    // TODO: While this does fix bugs with st sometimes
-    // TODO: running out of tokens and this function being
-    // TODO: called which leads to errors with createBranch
-    // TODO: since there's no tokens left, I SHOULDN'T be
-    // TODO: having to do tokenLeft checks here, they should
-    // TODO: be handled properly by the helper functions.
-    if (!hasTokensLeft(st)) return st;
-    // If the next token is a section/heading, we DON'T
-    // start a new paragraph, since sections are not part
-    // of paragraphs. We just advance and move on from SOF.
-    // Since we're calling advance early, we also need to
-    // check if there are tokens left, otherwise isAtSectionToken
-    // could result in a runtime error (since curToken is not safe).
-    if (hasTokensLeft(advance(st)) && isAtSectionToken(advance(st))) return advance(st);
-
-    // Otherwise, we advance on until the next paragraph
-    // boundary and recursively parse that as usual.
-    // In advanceWhile, we advance st once since it's
-    // already sitting at a paragraph boundary, so it
-    // wouldn't move forward otherwise.
-    const newSt = advanceWhile(
-        advance(st),
-        (curSt) => !isAtParagraphBoundary(curSt)
-    );
-
-    // Exclude the SOF token and the paragraph boundary token
-    // from the sublist to prevent infinite recursion.
-    // However, for `st`, we first need to check if it really
-    // is at a paragraph boundary, because if this function is
-    // being called from a SECTION node's case block, then
-    // there's a chance that `st` isn't at a paragraph boundary,
-    // and there is a meaningful token that we can't slice off.
-    // For example:
-    // "# Hello, World\n**bold**"
-    // Here, The parser will parse the tokens on the heading
-    // line, and then call this handleParagraphBoundary function.
-    // At this point, the state would be on the ** token, which
-    // is NOT a paragraph boundary token. So in this case we can't
-    // slice off the ** token because we will lose the bold part.
-    // TODO: Maybe a better solution to this problem? Maybe I can
-    // TODO: "insert" some kind of End-of-Section token after the
-    // TODO: headings end? And use that as a paragraph boundary
-    // TODO: as well?
-    // TODO: ----------------------------------------------------
-    const start = isAtParagraphBoundary(st) ? 1 : 0;
-    const subList = subListBetweenStates(st, newSt).slice(start,-1);
-    const subState = newState(subList);
-    const subTree = runParser(subState).tree
-
-    const type = BranchType.PARAGRAPH;
-    const data = null;
-    const children = subTree;
-
-    // If the paragraph isn't empty, we create and add
-    // the node, otherwise we just return the state. This
-    // should properly handle extra paragraphs at the end
-    // of sections and end of files.
-    if (children.length > 0) {
-        const node = createBranch(st, type, data, children);
-        // NOTE: We do NOT advance here. We are currently at the
-        // NOTE: *next* paragraph boundary, and we can't skip over
-        // NOTE: that, so that the parser can see it and start a
-        // NOTE: new paragraph. Otherwise, the parser will miss the
-        // NOTE: boundary and everything after this will not be
-        // NOTE: inside a paragraph as it should be.
-        return addNode(newSt, node);
+        if (areDefined && validRef && validParen) {
+            // Get the link/image node we collapsed the stack to.
+            const node = st.getCurrentStackBranch() as Node;
+            // Update its data.
+            const data = node.getData() as LinkImageData;
+            data.ref = ref.lexeme;
+            data.rightPad = paren.rightPad;
+            // Pop it from stack.
+            st.popBranch();
+        } else {
+            // If not the next two tokens aren't what we expect,
+            // it means this is not a well-formatted link/image,
+            // so we instead collapse the stack to the PREVIOUS
+            // branch (if there is one, otherwise to a paragraph),
+            // so that the token that started the link/image (a
+            // ![ or [) is treated as a word. Then we treat the
+            // current token (a BRACKET_PAREN) as a word as well.
+            st.collapseStackToPrevious();
+            handleLeaf(st, LeafType.WORD);
+        }
     } else {
-        return newSt;
+        // If not, then we handle the current BRACKET_PAREN
+        // as a WORD.
+        handleLeaf(st, LeafType.WORD);
     }
-
 }
 
-// Handles stuff enclosed within delimiting tokens,
-// (in our case, the emphasis nodes like bold/italic).
-// The function expects that the state is already ON
-// the token that starts the enclosed sequence. The
-// second argument is the token type that indicates
-// the end of the sequence (i.e the closing token
-// type). The last is the type of the node to create
-// and add to the AST. Note that this is a BranchType
-// since LeafTypes do not have this recursive
-// structure. Some "enclosed" LeafTypes like $$ math
-// delimiters are handled during lexing and are not
-// considered "enclosed" during the parsing stage.
-function handleEnclosedNode(st: State, endType: TokenType, nodeType: BranchType): State {
-    // Advance till we reach the closing endType or
-    // if we're at the same token as st (since it's possible
-    // the opening and closing types are the same and
-    // we're already sitting on that token which would
-    // cause advanceWhile to immediately finish otherwise).
-    const newSt = advanceWhile(st, (curSt) => {
-        const samePosition = curSt.position == st.position;
-        const unclosed = curToken(curSt).type != endType;
-        return samePosition || unclosed;
-    });
-
-    // Take the inner sub-list of tokens between the open
-    // and close tokens and recursively parse that sub-list
-    // with a new state, to get the inner AST.
-    // We also slice the sub-list exclude the opening and
-    // closing tokens at the start and end, otherwise 
-    // it will keep recursing infinitely on them.
-    const subList = subListBetweenStates(st, newSt);
-    const subState = newState(subList.slice(1,-1));
-    const subTree = runParser(subState).tree;
-
-    // Create node
-    const type = nodeType;
-    // We assume there's no data.
-    const data = null;
-    const children = subTree;
-    const node = createBranch(st, type, data, children);
-
-    // Add the node, advance once (since the state
-    // is currently sitting at the closing token),
-    // and return the state.
-    return advance(addNode(newSt, node));
-}
-
-// Handles nodes that consist of tokens appearing all
-// on the same row (in our case, that's the section
-// nodes like SECTION/SUBSECTION etc.). Expects that
-// the state is sitting on the symbol that starts the
-// sequence (i.e # or ##). Takes everything on the row
-// and parses it. `nodeType` is the type of node to
-// create and add to the AST.
-function handleRowNode(st: State, nodeType: BranchType): State {
-    // Advance till the end of the row (i.e we see a token
-    // that isn't on the same row as the current st's token).
-    const newSt = advanceWhile(st, (curSt) => {
-        // Get the lookahead list (it's a list not a token object!)
-        const la = lookahead(curSt);
-        // Need to do a bounds check first - the list would be
-        // empty if we've consumed all the tokens, which would
-        // raise a range error with la[0].
-        return la.length > 0 && la[0].row == curToken(st).row;
-    });
-
-    // Get the tokens between the states.
-    const subList = subListBetweenStates(st, newSt);
-    // Create a new state from the sublist, excluding
-    // the HASH token at the beginning that st is
-    // currently sitting on.
-    const subState = newState(subList.slice(1));
-    // Get the inner AST.
-    const subTree = runParser(subState).tree;
-
-    const type = nodeType;
-    const data = null;
-    const children = subTree;
-    const node = createBranch(st, type, data, children);
-
-    // newSt is sitting on the last token on the same row,
-    // which we've already parsed, so we advance once
-    // and then continue parsing.
-    return advance(addNode(newSt, node));
-}
-
-// Handles a LINK node or an IMAGE node (both of
-// which have almost the same structure).
-function handleLinkOrImage(st: State, nodeType: BranchType): State {
-    const t = curToken(st);
-
-    // Advance until we find the BRACKET_PAREN, i.e
-    // go from '[' to ']('
-    const newSt = advanceWhile(st, (curSt) => {
-        return curToken(curSt).type != TokenType.BRACKET_PAREN;
-    });
-
-    // Check that we really did end up at BRACKET_PAREN
-    // instead of advanceWhile finishing because of
-    // running out of tokens, in which case this isn't
-    // a LINK or IMAGE.
-    // TODO: Testing (is there a case where curToken might
-    // TODO: cause an out of bound error?)
-    // TODO: -------------------------------
-    if (curToken(newSt).type == TokenType.EOF) {
-        // If we didn't find a BRACKET_PAREN, we go back
-        // to the original st state, treat the current
-        // token as a WORD and then continue parsing from
-        // there.
-        const type = LeafType.WORD;
-        const data = { lexeme: t.lexeme, rightPad: t.rightPad };
-        const node = createLeaf(st, type, data);
-        // We add the node to st
-        return advance(addNode(st, node));
+function handleListItem(st: State, type: BranchType): void {
+    // Check if there's a list node already in the stack.
+    // If so, then we are at the end of the previous list
+    // item node, and the start of a new list item node.
+    if (st.stackSomeFromBottom(n => n.type === type)) {
+        handleListItemEnd(st);
+        handleListItemStart(st);
+    } else {
+        // Otherwise, it's the start of a new list entirely,
+        // and also a new list item.
+        handleListStart(st, type);
+        handleListItemStart(st);
     }
+}
 
-    // We expect the next token to be a WORD token,
-    // whose lexeme is the link/img path. The token
-    // after that should be the closing RIGHT_PAREN
-    // token.
-    const [ref, paren] = lookahead(newSt, 2);
-
-    // Check that ref and paren are not undefined
-    // and have the correct token type. If not, then
-    // we backtrack to st like above, treating [/![ as
-    // a WORD and returning the original state.
-    const validRef = ref && (ref.type == TokenType.WORD);
-    const validParen = paren && (paren.type == TokenType.RIGHT_PAREN);
-    if (!validRef || !validParen) {
-        const type = LeafType.WORD;
-        const data = { lexeme: t.lexeme, rightPad: t.rightPad };
-        const node = createLeaf(st, type, data);
-        return advance(addNode(st, node));
+function handleListItemEnd(st: State): void {
+    const node = st.collapseStackToListItem().getCurrentStackBranch();
+    if (node !== null && node.type == BranchType.LIST_ITEM) {
+        st.popBranch();
     }
-
-    // Otherwise, it's a valid LINK/IMAGE! So we can
-    // parse the subList, grab the ref and move on!
-    const subList = subListBetweenStates(st, newSt);
-    const subState = newState(subList);
-    const subTree = runParser(subState).tree;
-
-    // Create, add the node and move on.
-    const type = nodeType;
-    const data = { lexeme: ref.lexeme, rightPad: ref.rightPad };
-    const children = subTree;
-    const node = createBranch(st, type, data, children);
-    // We advance thrice since newSt is sitting on
-    // BRACKET_PAREN and we already parsed the next
-    // two tokens (when did lookahead for ref and paren).
-    return advance(addNode(newSt, node), 3);
 }
 
-export function parse(tokens: Token[]): State {
-    const state = newState(tokens);
-    const finalState = runParser(state);
-    return finalState;
+function handleListItemStart(st: State): void {
+    const node = new Node(st, BranchType.LIST_ITEM);
+    st.pushBranch(node).advance();
 }
 
-export function happyParse(tokens: Token[]): AST {
-    const finalState = parse(tokens);
-    finalState.errors.forEach(e => e.print());
-    return finalState.tree;
+function handleListStart(st: State, type: BranchType): void {
+    const node = new Node(st, type);
+    st.pushBranch(node);
+}
+
+function handleListEnd(st: State): void {
+    handleListItemEnd(st);
+    const node = st.collapseStackToList().getCurrentStackBranch();
+    if (node !== null && isListNode(node)) {
+        st.popBranch();
+    }
+}
+
+function runParser(st: State): void {
+    while (st.hasTokensLeft()) {
+        const t = st.curToken();
+
+        // We before matching token types, we also
+        // check to see if we've reached the end of
+        // the row. If so, we need to end possible
+        // row nodes.
+        if ((st.lookahead().length > 0) && (st.lookahead()[0].row > t.row)) {
+            if (st.stackSomeFromBottom(isRowNode)) handleRowEnd(st);
+        }
+
+        switch (t.type) {
+
+            /**************/
+            /* Leaf Nodes */
+            /**************/
+
+            case TokenType.WORD:
+                handleLeaf(st, LeafType.WORD); break;
+            case TokenType.AT_DELIM:
+                handleLeaf(st, LeafType.AT_DELIM); break;
+            case TokenType.HEREDOC_TEX:
+                handleLeaf(st, LeafType.HEREDOC_TEX); break;
+            case TokenType.TEX_INLINE_MATH:
+                handleLeaf(st, LeafType.TEX_INLINE_MATH); break;
+            case TokenType.TEX_DISPLAY_MATH:
+                handleLeaf(st, LeafType.TEX_DISPLAY_MATH); break;
+            case TokenType.LATEX_INLINE_MATH:
+                handleLeaf(st, LeafType.LATEX_INLINE_MATH); break;
+            case TokenType.LATEX_DISPLAY_MATH:
+                handleLeaf(st, LeafType.LATEX_DISPLAY_MATH); break;
+
+            /************/
+            /* MACRO_DEF *
+            /************/
+
+            case TokenType.MACRO_DEF: {
+                const data = extractMacroDefData(t);
+                st.attachMacroDef(data).advance();
+                break;
+            }
+
+            /******************/
+            /* Enclosed Nodes */
+            /******************/
+
+            case TokenType.STAR:
+                handleEnclosed(st, BranchType.ITALIC); break;
+            case TokenType.DOUBLE_STAR:
+                handleEnclosed(st, BranchType.BOLD); break;
+            case TokenType.DOUBLE_UNDERSCORE:
+                handleEnclosed(st, BranchType.UNDERLINE); break;
+            case TokenType.DOUBLE_TILDE:
+                handleEnclosed(st, BranchType.STRIKETHROUGH); break;
+
+            /*************/
+            /* Row Nodes */
+            /*************/
+
+            case TokenType.HASH:
+                handleRowStart(st, BranchType.SECTION);
+                break;
+            case TokenType.HASHSTAR:
+                handleRowStart(st, BranchType.SECTION_STAR); 
+                break;
+            case TokenType.DOUBLE_HASH:
+                handleRowStart(st, BranchType.SUBSECTION); 
+                break;
+            case TokenType.DOUBLE_HASHSTAR:
+                handleRowStart(st, BranchType.SUBSECTION_STAR); 
+                break;
+            case TokenType.TRIPLE_HASH:
+                handleRowStart(st, BranchType.SECTION); 
+                break;
+            case TokenType.TRIPLE_HASHSTAR:
+                handleRowStart(st, BranchType.SECTION_STAR); 
+                break;
+
+            /*****************/
+            /* Link or Image */
+            /*****************/
+
+            case TokenType.LEFT_BRACKET:
+                handleLinkOrImageStart(st, BranchType.LINK);
+                break;
+            case TokenType.BANG_BRACKET:
+                handleLinkOrImageStart(st, BranchType.IMAGE);
+                break;
+            case TokenType.BRACKET_PAREN:
+                // Here I can lookahead for a WORD and a RIGHT_PAREN
+                // immediately and parse them as well.
+                // If they appear outside that context, I can parse
+                // the right paren as a word.
+                handleLinkOrImageEnd(st);
+                break;
+            case TokenType.RIGHT_PAREN:
+                const word = new Node(st, LeafType.WORD);
+                word.setData({ lexeme: t.lexeme, rightPad: t.rightPad });
+                st.addLeaf(word).advance();
+                break;
+
+            /*********/
+            /* LISTS */
+            /*********/
+
+            case TokenType.UL_ITEM:
+                handleListItem(st, BranchType.ITEMIZE);
+                break;
+            case TokenType.OL_ITEM:
+                handleListItem(st, BranchType.ENUMERATE);
+                break;
+
+            /*********/
+            /* Misc. */
+            /*********/
+
+            case TokenType.SOF:
+                handleParStart(st);
+                st.advance();
+                break;
+            case TokenType.EMPTY_ROW:
+                handleParEnd(st);
+                handleParStart(st);
+                st.advance();
+                break;
+            case TokenType.EOF:
+                handleParEnd(st);
+                return;
+
+            default: {
+                const err = new UnrecognizedTokenError(st);
+                st.attachError(err).advance();
+            }
+        }
+    }
+}
+
+export function parse(lexerState: LexerState): State {
+    const state = new State(lexerState);
+    runParser(state);
+    return state;
+}
+
+export function parseSource(src: string): State {
+    return parse(lex(src));
+}
+
+export function happyParse(src: string): AST {
+    const state = parseSource(src);
+    state.getErrors().forEach(e => e.print());
+    return state.getAST();
 }
