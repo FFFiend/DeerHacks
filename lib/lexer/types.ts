@@ -15,7 +15,7 @@ export enum TokenType {
     // Markup macro definition.
     MACRO_DEF,
     // 'TEX <<< ...' and '...'.
-    HEREDOC,
+    HEREDOC_TEX,
 
     // TeX & LaTeX Math Delimiters.
     TEX_INLINE_MATH, TEX_DISPLAY_MATH,

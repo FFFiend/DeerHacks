@@ -205,7 +205,7 @@ export function handleHeredoc(st: State): void {
         .advanceUntil(behindEndOfLine)
         .captureMarkedSubstring();
 
-    const type = TokenType.HEREDOC;
+    const type = TokenType.HEREDOC_TEX;
     const lexeme = openDelim + contents + closeDelim + "\n";
     // Note no rightPad is needed for HEREDOCs
     st.addToken(createToken(snap, type, lexeme, ""));
