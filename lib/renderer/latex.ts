@@ -1,9 +1,12 @@
 import { AST, LeafType, BranchType, Node } from "../parser/types.ts";
 
 // TODO: Lots of wet code, DRY it up!
+// TODO: -----------------------------
 
 // Renders a leaf node.
 function renderLeaf(node: Node): string {
+    const data = node.getData();
+
     switch (node.type) {
         case LeafType.WORD: {
             // Data ISN'T null here but since the Node type
@@ -12,49 +15,50 @@ function renderLeaf(node: Node): string {
             // TypeScript thinks data might be null so we have
             // to handle it with a ternary. AGAIN: FIND A BETTER
             // REPRESENTATION!
-            return node.data ? node.data.lexeme + node.data.rightPad : "";
+            return data !== null ? data.lexeme + data.rightPad : "";
         }
 
         case LeafType.AT_DELIM: {
             // Wrap around inline math delim \(...\)
-            return node.data
-                ? `\\(${node.data.lexeme}\\)${node.data.rightPad}`
+            return data !== null
+                ? `\\(${data.lexeme}\\)${data.rightPad}`
                 : "";
         }
 
-        case LeafType.RAW_TEX: {
+        case LeafType.HEREDOC_TEX: {
             // Split into lines, remove the first/last to get
             // rid of delimiters and join it up again.
-            return node.data
-                ? `\n${node.data.lexeme.split("\n").slice(1,-1).join("\n")}\n`
+            return data !== null
+                ? `\n${data.lexeme.split("\n").slice(1,-1).join("\n")}\n`
                 : "";
         }
 
         case LeafType.TEX_INLINE_MATH: {
-            return node.data
-                ? `$${node.data.lexeme}$${node.data.rightPad}`
+            return data !== null
+                ? `$${data.lexeme}$${data.rightPad}`
                 : "";
         }
 
         case LeafType.TEX_DISPLAY_MATH: {
-            return node.data
-                ? `$$${node.data.lexeme}$$${node.data.rightPad}`
+            return data !== null
+                ? `$$${data.lexeme}$$${data.rightPad}`
                 : "";
         }
 
         case LeafType.LATEX_INLINE_MATH: {
-            return node.data
-                ? `\\(${node.data.lexeme}\\)${node.data.rightPad}`
+            return data !== null
+                ? `\\(${data.lexeme}\\)${data.rightPad}`
                 : "";
         }
 
         case LeafType.LATEX_DISPLAY_MATH: {
-            return node.data
-                ? `\\[${node.data.lexeme}\\]${node.data.rightPad}`
+            return data !== null
+                ? `\\[${data.lexeme}\\]${data.rightPad}`
                 : "";
         }
 
         // TODO: Proper Error handling!!!
+        // TODO: ------------------------
         default: {
             return `UNIMPLEMENTED: ${Object.keys(node).includes("children") ? BranchType[node.type] : LeafType[node.type]}`;
         }
@@ -64,8 +68,9 @@ function renderLeaf(node: Node): string {
 // Renders a branch node and its children
 // recursively, returning the resulting
 // LaTeX string.
-// TODO: All the other BranchTypes...
 function renderBranch(node: Node): string {
+    const data = node.getData();
+
     switch (node.type) {
         case BranchType.ITALIC: {
             // AGAIN: TypeScript doesn't know children ISN'T null so
@@ -160,7 +165,7 @@ function renderBranch(node: Node): string {
         }
 
         case BranchType.LINK: {
-            const ref = node.data ? node.data.lexeme : "";
+            const ref = data !== null ? data.lexeme : "";
             const pieces
                 = node.children
                 ? node.children.map((n: Node) => renderNode(n))
@@ -170,7 +175,7 @@ function renderBranch(node: Node): string {
         }
 
         case BranchType.IMAGE: {
-            const ref = node.data || "";
+            const ref = node.getData() || "";
             const pieces
                 = node.children
                 ? node.children.map((n: Node) => renderNode(n))
@@ -248,19 +253,14 @@ function renderBranch(node: Node): string {
     }
 }
 
-// TODO: I still don't like how leaf/branch nodes
-// TODO: are handled here, and the Object.keys way
-// TODO: of checking their type feels hacky. Maybe
-// TODO: there's a better way to represent them and
-// TODO: also distinguish between them?
 function renderNode(node: Node): string {
     // Handle branches/leafs separately since
     // we're using separate enums for both which
     // would otherwise mess with the switch cases.
-    if (Object.keys(node).includes("children")) {
-        return renderBranch(node);
-    } else {
+    if (node.isLeaf) {
         return renderLeaf(node);
+    } else {
+        return renderBranch(node);
     }
 }
 
