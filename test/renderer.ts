@@ -1,7 +1,10 @@
 import { render } from "../lib/renderer/latex.ts";
 import { happyParse } from "../lib/parser/parser.ts";
-import { happyLex } from "../lib/lexer/lexer.ts";
 
 const sample = Deno.readTextFileSync("./test/sample.txt")
-const rendered = render(happyParse(happyLex(sample)));
-console.log("%c" + rendered + "\n", "color: green");
+console.time("Took");
+const rendered = render(happyParse(sample));
+console.timeEnd("Took");
+
+console.log("Output file will be written to ./test/output.txt");
+Deno.writeTextFileSync("./test/output.txt", rendered);

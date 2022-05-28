@@ -1,6 +1,7 @@
 import { happyLex } from "../lib/lexer/lexer.ts";
-import { printToken } from "../lib/lexer/helpers.ts";
+import { tokenToString } from "../lib/lexer/helpers.ts";
 
 const sample = Deno.readTextFileSync("./test/sample.txt")
+console.time("Took");
 const tokens = happyLex(sample);
-tokens.forEach(printToken);
+console.timeEnd("Took");
