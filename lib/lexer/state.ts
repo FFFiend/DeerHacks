@@ -8,6 +8,8 @@ import {
     behindEndOfLine,
     constrainString,
     behindWhitespace,
+    onEndOfLine,
+    onWhitespace
 } from "./helpers.ts";
 
 // TODO: Move to types (not for lex/parse/render, just the general one).
@@ -153,36 +155,34 @@ export class State {
     }
 
     public captureRightPad(): string {
-        // We will keep advancing as long as there is whitespace
-        // in front, EXCEPT for newlines, which we handle slightly
-        // differently.
-        const advanceFn = and(behindWhitespace, not(behindEndOfLine));
+        // Keep advancing if we're on whitespace, EXCEPT
+        // for newlines, which we handle differently.
+        const advanceFn = and(onWhitespace, not(onEndOfLine));
 
-        // Advance once to move past the current character which
-        // we assume is the last char of the previous token, and
-        // also a NON-whitespace character, which we don't want
-        // to include in the rightPad so we make sure to mark the
-        // position AFTER advancing past it.
         const rightPad = this
+            // We're currently on the last char of the
+            // token that was just scanned when this
+            // function was called, so we move past
+            // that first.
             .advance()
             .markPosition()
             .advanceWhile(advanceFn)
             .captureMarkedSubstring();
 
-        // Recall our advanceFn stops advancing if we see a non
-        // whitespace character, OR if we see a newline.
         // If we DID happen to stop behind a newline, then
         // we add that as part of the rightPad, WITHOUT
         // actually advancing state. This is so that we
         // capture newlines properly in the padding, without
         // consuming the newline so that the lexer can still
-        // see it and handle possible EMPTY_ROWs (which we would
-        // miss if we advanced past the newlines as well, since
-        // the lexer doesn't check what's behind).
+        // see it and handle EMPTY_ROWs. We also slice away
+        // the LAST char from the captured rightPad string
+        // because captureMarkedSubstring is inclusive and
+        // so it also captures the nonwhitespace char (or
+        // the newline char) that we stopped on.
         if (this.lookahead() === "\n") {
-            return rightPad + "\n";
+            return rightPad.slice(0, rightPad.length - 1) + "\n";
         } else {
-            return rightPad;
+            return rightPad.slice(0, rightPad.length - 1);
         }
     }
 
