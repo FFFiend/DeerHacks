@@ -159,21 +159,32 @@ export function handleHeredoc(st: State): void {
     const delimiter = match[1];
 
     // We now advance until we see the delimiter on its own
-    // on a new line (i.e surrounded by \n, or at the end
+    // on a new line i.e surrounded by \n, or at the end
     // of the file, which also counts as being on its own
-    // line).
-    const atEndOfFile = (st: State) => !st.hasSourceLeft();
+    // line. To check for end of file, we check the length of
+    // the string returned by lookahead.
+    const endOfFile = (st: State) =>
+        // lookahead(k) only returns whatever is left if k is greater
+        // than the number of chars left in source. This means if it
+        // returns a string of length less than k, then we're near the
+        // end of the file.
+        st.lookahead(delimiter.length + 2).length === delimiter.length + 1;
     const behindDelimAndNewline = behind("\n" + delimiter + "\n");
-    const behindDelimAndEOF = and(behind("\n" + delimiter), atEndOfFile);
+    const behindDelimAndEOF = and(behind("\n" + delimiter), endOfFile);
     const advanceFn = or(behindDelimAndEOF, behindDelimAndNewline);
 
+    // Capture everything until the closing delim is
+    // found by our advanceFn.
     const contents = st
+        // We also need to advance first before marking the
+        // position because right now the state is at the \n
+        // of the opening delim, which we ALREADY captured
+        // so we don't want to capture the same \n twice.
+        .advance()
         .markPosition()
         .advanceUntil(advanceFn)
         // Advance once more so we can also capture the \n
-        // that comes BEFORE the delimiter (not the end,
-        // because it might not exist if the delimiter
-        // is at the end of the file!)
+        // that comes BEFORE the closing delimiter.
         .advance()
         .captureMarkedSubstring();
 
@@ -201,14 +212,26 @@ export function handleHeredoc(st: State): void {
     // At this point we know everything up to the next \n
     // is part of the closing delimiter.
     const closeDelim = st
+        // The last advanceFn stopped on a newline, so we need
+        // to advance once here to get past that newline (otherwise
+        // we'll end up capturing the same \n twice).
+        .advance()
         .markPosition()
+        // Capture everything up to the next end of line. If
+        // there's no end of line (i.e we're near the end of
+        // the file), the function will just eat everything
+        // remaining.
         .advanceUntil(behindEndOfLine)
         .captureMarkedSubstring();
 
     const type = TokenType.HEREDOC_TEX;
-    const lexeme = openDelim + contents + closeDelim + "\n";
+    const lexeme = openDelim + contents + closeDelim;
     // Note no rightPad is needed for HEREDOCs
-    st.addToken(createToken(snap, type, lexeme, ""));
+    // We also advance since right now we're on the last char
+    // of the closing delimiter (i.e behind the final end of line).
+    // We advance so we don't end up capturing the last char as
+    // another WORD.
+    st.addToken(createToken(snap, type, lexeme, "")).advance();
 }
 
 export function handleWord(st: State): void {
