@@ -116,7 +116,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\section{" + pieces.join("") + "}\n";
+            return "\\section{" + pieces.join("").trim() + "}\n";
         }
 
         case BranchType.SUBSECTION: {
@@ -125,7 +125,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\subsection{" + pieces.join("") + "}\n";
+            return "\\subsection{" + pieces.join("").trim() + "}\n";
         }
 
         case BranchType.SUBSUBSECTION: {
@@ -134,7 +134,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\subsubsection{" + pieces.join("") + "}\n";
+            return "\\subsubsection{" + pieces.join("").trim() + "}\n";
         }
 
         case BranchType.SECTION_STAR: {
@@ -143,7 +143,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\section*{" + pieces.join("") + "}\n";
+            return "\\section*{" + pieces.join("").trim() + "}\n";
         }
 
         case BranchType.SUBSECTION_STAR: {
@@ -152,7 +152,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\subsection*{" + pieces.join("") + "}\n";
+            return "\\subsection*{" + pieces.join("").trim() + "}\n";
         }
 
         case BranchType.SUBSUBSECTION_STAR: {
@@ -161,7 +161,7 @@ function renderBranch(node: Node): string {
                 ? node.children.map((n: Node) => renderNode(n))
                 : [];
 
-            return "\\subsubsection*{" + pieces.join("") + "}\n";
+            return "\\subsubsection*{" + pieces.join("").trim() + "}\n";
         }
 
         case BranchType.LINK: {
