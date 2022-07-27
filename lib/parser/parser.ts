@@ -89,19 +89,19 @@ function runParser(st: State): void {
                 handleRowStart(st, BranchType.SECTION);
                 break;
             case TokenType.HASHSTAR:
-                handleRowStart(st, BranchType.SECTION_STAR); 
+                handleRowStart(st, BranchType.SECTION_STAR);
                 break;
             case TokenType.DOUBLE_HASH:
-                handleRowStart(st, BranchType.SUBSECTION); 
+                handleRowStart(st, BranchType.SUBSECTION);
                 break;
             case TokenType.DOUBLE_HASHSTAR:
-                handleRowStart(st, BranchType.SUBSECTION_STAR); 
+                handleRowStart(st, BranchType.SUBSECTION_STAR);
                 break;
             case TokenType.TRIPLE_HASH:
-                handleRowStart(st, BranchType.SECTION); 
+                handleRowStart(st, BranchType.SUBSUBSECTION);
                 break;
             case TokenType.TRIPLE_HASHSTAR:
-                handleRowStart(st, BranchType.SECTION_STAR); 
+                handleRowStart(st, BranchType.SUBSUBSECTION_STAR);
                 break;
 
             /*****************/
