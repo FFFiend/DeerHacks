@@ -1,9 +1,5 @@
 import { Token } from "../lexer/types.ts";
-import { Node } from "./node.ts";
 import { UnrecognizedTokenError } from "./errors.ts";
-
-// Re-export types.
-export { Node } from "./node.ts";
 
 // These nodes never have any children. Their data
 // contains raw strings which will be written to
@@ -14,7 +10,7 @@ export enum LeafType {
     // @xyz
     AT_DELIM,
     // TEX <<< EOF ... EOF
-    HEREDOC_TEX,
+    RAW_TEX,
     // $ ... $
     TEX_INLINE_MATH,
     // $$ ... $$
@@ -55,11 +51,6 @@ export type BaseNodeData = {
     rightPad: string
 }
 
-// Enclosed nodes (BOLD, ITALIC, etc.)
-export type EnclosedNodeData = BaseNodeData & {
-    leftPad: string
-}
-
 // RAW_TEX
 export type RawTexData = BaseNodeData & {
     // The delimiter used.
@@ -69,8 +60,7 @@ export type RawTexData = BaseNodeData & {
 // LINK and IMAGE
 export type LinkImageData = BaseNodeData & {
     // The image path or uri for links.
-    ref: string,
-    leftPad: string
+    ref: string
 }
 
 // TeX macro/command calls inside document
@@ -83,11 +73,20 @@ export type MacroCallData = BaseNodeData & {
 
 export type NodeData
     = BaseNodeData
-    | EnclosedNodeData
     | RawTexData
     | LinkImageData
     | MacroCallData
     | null;
+
+// The tree structure.
+export type Node = {
+    col: number,
+    row: number,
+    type: NodeType,
+    data: NodeData,
+    position: number
+    children?: Node[],
+};
 
 // The AST is a list of nodes.
 export type AST = Node[]
