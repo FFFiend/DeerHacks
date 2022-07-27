@@ -76,7 +76,7 @@ export function tokenToString(token: Token, colorer?: Colorer): string {
     const colrow = b(token.col.toString()) + ":" + b(token.row.toString());
     const lexeme = g(constrainString(JSON.stringify(token.lexeme)));
 
-    return `${type} { C:R = ${colrow}, Lexeme = '${lexeme}' }`;
+    return `${type} { C:R = ${colrow}, Lexeme = ${lexeme} }`;
 }
 
 // State predicates.
