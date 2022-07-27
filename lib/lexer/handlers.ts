@@ -19,13 +19,22 @@ import {
 
 export function handleMathDelimiter(st: State, endDelim: string, type: TokenType): void {
     const snap = st.snapshot();
+    // Advance until we see the closing delimiter.
     const lexeme = st
             .markPosition()
             .advanceUntil(behind(endDelim))
+            // Advance past the closing delimiter.
             .advance(endDelim.length)
             .captureMarkedSubstring();
 
-    if (st.lookahead(endDelim.length) !== endDelim) {
+    // Check to make sure we really did stop at the closing
+    // delimiter (instead of the end of the source).
+    if (lexeme.endsWith(endDelim)) {
+        // If we did, we can create and add the token.
+        const rightPad = st.captureRightPad();
+        st.addToken(createToken(snap, type, lexeme, rightPad));
+    } else {
+        // Otherwise it's an error.
         const hint = [
             "If you did not mean to insert a math delimiter,",
             "you should escape the character with a backslash.",
@@ -36,12 +45,7 @@ export function handleMathDelimiter(st: State, endDelim: string, type: TokenType
         // and handle the opening delim as a WORD.
         const err = new UnclosedSequenceError(snap, endDelim, hint);
         handleOther(st.attachError(err).backtrackToMarked());
-    } else {
-        // Otherwise we can create and add the token.
-        const rightPad = st.captureRightPad();
-        st.addToken(createToken(snap, type, lexeme, rightPad));
     }
-
 }
 
 // TODO: Implementation. Currently falls back on handleOther.
