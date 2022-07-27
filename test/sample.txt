@@ -1,3 +1,16 @@
 # Hello, World!
 
-**Hi.**
+###* Problem 1
+
+Let $x \in \mathbb{R}$. Define $f : \mathbb{R} \to \mathbb{R}$ as $f(x) = x^2$.
+We will show that this function is not uniformly continuous.
+
+... Show it ...
+
+On the other hand, consider $g : [0,1] \to \mathbb{R}$ defined as $g(x) = x^2$.
+We will show that this function *is* uniformly continuous.
+
+... Show it ...
+
+Thus, we conclude: **the *domain* of a function is __really__ important!**
+
